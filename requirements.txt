@@ -1,0 +1,4 @@
+chainlit
+openai
+pymongo[srv]
+qdrant-client
