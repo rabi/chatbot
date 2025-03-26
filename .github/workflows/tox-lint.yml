@@ -7,12 +7,7 @@ jobs:
   run_linters:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v2
-      - name: Install tox
-        run: pip install tox
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.5.0
       - name: Run linters
-        run: |
-          tox -e lint
-          tox -e ruff
-          tox -e style
+        run: make tox
