@@ -1,17 +1,17 @@
-.PHONY: help install-tox install-deps tox
+.PHONY: help install-deps tox
 
-help:
-	@echo "Makefile targets:"
-	@echo "  make install-deps - Install Python dependencies from requirements.txt"
-	@echo "  make install-tox  - Ensure tox is installed"
-	@echo "  make tox          - Run all tox environments"
-
-install-deps:
+install-deps: ## Install Python dependencies
 	pip install --upgrade pip
 	pip install -r requirements.txt
 
-install-tox:
-	./scripts/install-tox.sh
-
-tox: install-tox
+tox: ## Run tox
 	tox
+
+help: ## Show this help screen
+	@echo 'Usage: make <OPTIONS> ... <TARGETS>'
+	@echo ''
+	@echo 'Available targets are:'
+	@echo ''
+	@grep -E '^[ a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-25s\033[0m %s\n", $$1, $$2}'
+	@echo ''
