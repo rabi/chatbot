@@ -1,9 +1,5 @@
 FROM registry.access.redhat.com/ubi9/ubi
 
-# LLM spec
-ENV OPENAI_API_BASE=localhost
-ENV OPENAI_API_KEY=redhat
-
 # MongoDB
 ENV DB_URL=mongodb://localhost
 
