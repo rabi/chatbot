@@ -19,8 +19,6 @@ except ImportError as e:
 
 SEARCH_INSTRUCTION = "Represent this sentence " \
                 "for searching relevant passages: "
-LOGO_URL = "https://www.redhat.com/rhdc/managed-files/" \
-            "Asset-Red_Hat-Logo_page-General-This-RGB.svg"
 
 llm_api_url = os.environ.get("LLM_API_URL", 'http://<changeme>/v1')
 llm_api_key = os.environ.get("LLM_API_KEY")
@@ -124,10 +122,6 @@ async def init_chat():
             ]
     ).send()
     cl.user_session.set("model_settings", settings)
-    await cl.Avatar(
-        name="OpenStack",
-        url=LOGO_URL,
-    ).send()
 
 
 @cl.action_callback("feedback")
@@ -149,8 +143,8 @@ async def main(message: cl.Message):
     """
     model_settings = cl.user_session.get("model_settings")
     message_history = [{"role": "system",
-                        "content": "Your name is Openstack. "
-                        "Help to investigate the issue"}]
+                        "content": "You are an CI assistant. "
+                        "You help with CI failures and help define RCA."}]
     message_history.append({"role": "user", "content": message.content})
 
     actions = [
