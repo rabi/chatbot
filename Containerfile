@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/python-312
+FROM registry.access.redhat.com/ubi9/ubi:9.3-1552
 
 # Database environment
 ENV DB_URL=mongodb://localhost
