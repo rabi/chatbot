@@ -1,32 +1,24 @@
-FROM registry.access.redhat.com/ubi9/ubi
+FROM registry.access.redhat.com/ubi9/python-312
 
-# MongoDB
+# Database environment
 ENV DB_URL=mongodb://localhost
-
-# VectorDB
 ENV VECTORDB_URL=localhost
 ENV VECTORDB_COLLECTION_NAME=None
 
-# Install python 
-RUN yum update -y && \
-    yum install -y \
-    python3 \
-    python3-devel && \
-    rm -rf /var/cache/yum
-
-# Install python libraries
+# Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip
 RUN pip3 --no-cache-dir install -r /tmp/requirements.txt
 
-#Copy project files
-RUN mkdir -p /app
+# Deploy the app
+USER root
+RUN mkdir -p /app && \
+    chgrp -R 0 /app && \
+    chmod -R g=u /app
 COPY src/ /app
 
-# Support arbitrary user ids
-RUN chgrp -R 0 /app && \
-    chmod -R g=u /app
-
 WORKDIR /app
+USER 65532:65532
 
 EXPOSE 8000
 
