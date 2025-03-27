@@ -11,7 +11,9 @@ try:
     import chainlit as cl
     from chainlit.input_widget import Select, Switch, Slider
     from pymongo import MongoClient
+    from pymongo.errors import ConnectionFailure, PyMongoError
     from qdrant_client import QdrantClient
+    from qdrant_client.http.exceptions import QdrantException
 except ImportError as e:
     print(f"Error importing required libraries: {e}")
     print("openai chainlit pymongo qdrant-client")
@@ -45,9 +47,20 @@ vectordb_collection_name = os.environ.get("VECTORDB_COLLECTION_NAME",
                                           'all-jira-tickets')
 
 # Message history storage
-db_client = MongoClient(db_url)
-conv_db = db_client[default_db_name]
-collection = conv_db[default_collection_name]
+try:
+    DB_CLIENT = MongoClient(db_url, serverSelectionTimeoutMS=5000)
+    # Validate connection immediately
+    DB_CLIENT.admin.command('ping')
+    CONV_DB = DB_CLIENT[default_db_name]
+    COLLECTION = CONV_DB[default_collection_name]
+    DB_AVAILABLE = True
+    cl.logger.info("Successfully connected to MongoDB")
+except (ConnectionFailure, PyMongoError) as e:
+    cl.logger.error(f"Failed to connect to MongoDB: {str(e)}")
+    DB_CLIENT = None
+    CONV_DB = None
+    COLLECTION = None
+    DB_AVAILABLE = False
 
 llm = AsyncOpenAI(
     base_url=llm_api_url,
@@ -62,29 +75,48 @@ async def db_lookup(search_string: str,
     Search the vector database for relevant content based on the input query.
     Args:
         search_string: The query to search for
-        embedding_model: The model to use for creating embeddings
+        model_name: The model to use for creating embeddings
         search_top_n: Maximum number of results to return
         search_sensitive: Minimum similarity score threshold
     Returns:
         List of search results with text and metadata
     """
     results = []
-    embedding = await llm.embeddings.create(model=model_name,
-                                            input=search_string,
-                                            encoding_format='float')
-    embedding = embedding.data[0].embedding
-    search_results = vectordb_client.search(
-        collection_name=vectordb_collection_name,
-        query_vector=embedding,
-        limit=search_top_n)
-    for res in search_results:
-        if res.score >= search_sensitive:
-            results.append(
-                {
-                    "score": res.score,
-                    "url": res.payload['url']
-                })
-    return results
+    try:
+        embedding_response = await llm.embeddings.create(
+            model=model_name,
+            input=search_string,
+            encoding_format='float'
+        )
+
+        if not embedding_response:
+            cl.logger.error("Failed to get embeddings: " +
+                            f"No response from model {model_name}")
+            return results
+        if not embedding_response.data or len(embedding_response.data) == 0:
+            cl.logger.error("Failed to get embeddings: " +
+                            f"Empty response for model {model_name}")
+            return results
+
+        embedding = embedding_response.data[0].embedding
+
+        search_results = vectordb_client.search(
+            collection_name=vectordb_collection_name,
+            query_vector=embedding,
+            limit=search_top_n)
+
+        for res in search_results:
+            if res.score >= search_sensitive:
+                results.append(
+                    {
+                        "score": res.score,
+                        "url": res.payload['url']
+                    })
+        return results
+    except (QdrantException, ValueError, KeyError) as e:
+        cl.logger.error(f"Error in db_lookup: {str(e)}")
+        # Return empty results on error instead of crashing
+        return results
 
 
 @cl.on_chat_start
@@ -130,9 +162,17 @@ async def on_action(action):
     Handle user feedback on chat responses.
     Updates the database with the feedback value.
     """
-    filter_msg = {"message_id": action.forId}
-    value = {"$set": {"feedback": action.value}}
-    collection.update_one(filter_msg, value)
+    if not DB_AVAILABLE or COLLECTION is None:
+        cl.logger.warning("MongoDB is not available - feedback " +
+                          "will not be saved")
+        return
+
+    try:
+        filter_msg = {"message_id": action.forId}
+        value = {"$set": {"feedback": action.value}}
+        COLLECTION.update_one(filter_msg, value)
+    except PyMongoError as e:
+        cl.logger.error(f"Failed to save feedback: {str(e)}")
 
 
 @cl.on_message
@@ -142,41 +182,87 @@ async def main(message: cl.Message):
     and generates AI responses.
     """
     model_settings = cl.user_session.get("model_settings")
+
+    # Create response message with feedback actions
+    actions = [
+            cl.Action(name="feedback", value="positive",
+                      label="Affirmative", description="Positive feedback",
+                      payload={"feedback": "positive"}),
+            cl.Action(name="feedback", value="negative",
+                      label="Negative", description="Negative feedback",
+                      payload={"feedback": "negative"})
+        ]
+    msg = cl.Message(content="", actions=actions)
+
+    # Process user message and get AI response
+    await process_message_and_get_response(message, msg, model_settings)
+
+    # Perform search and display results
+    search_results = await perform_search(message.content, msg.content)
+    await display_search_results(search_results)
+
+    # Save conversation data
+    save_conversation_data(message, msg, model_settings, search_results)
+
+    await msg.send()
+
+
+async def process_message_and_get_response(user_message, response_msg,
+                                           model_settings):
+    """Helper function to process the message and get AI response"""
     message_history = [{"role": "system",
                         "content": "You are an CI assistant. "
                         "You help with CI failures and help define RCA."}]
-    message_history.append({"role": "user", "content": message.content})
-
-    actions = [
-            cl.Action(name="feedback", value="positive",
-                      label="Affirmative", description="Positive feedback"),
-            cl.Action(name="feedback", value="negative",
-                      label="Negative", description="Negative feedback")
-        ]
-    msg = cl.Message(content="", actions=actions)
+    message_history.append({"role": "user", "content": user_message.content})
 
     if model_settings['stream']:
         async for stream_resp in await llm.chat.completions.create(
             messages=message_history, **model_settings
         ):
-            if token := stream_resp.choices[0].delta.content or "":
-                await msg.stream_token(token)
+            # Check if choices exists and has at least one element
+            if stream_resp.choices and len(stream_resp.choices) > 0:
+                if token := stream_resp.choices[0].delta.content or "":
+                    await response_msg.stream_token(token)
     else:
         content = await llm.chat.completions.create(
             messages=message_history, **model_settings)
-        msg.content = content.choices[0].message.content
+        response_msg.content = content.choices[0].message.content
 
-    # Searching
-    search_query = SEARCH_INSTRUCTION + message.content
-    search_summ_message = SEARCH_INSTRUCTION + msg.content
 
-    search_results_query = await db_lookup(search_query, embeddings_model)
-    search_results_sum = await db_lookup(search_summ_message, embeddings_model)
+async def perform_search(user_content, response_content):
+    """Helper function to perform search with user input and AI response"""
+    search_results = []
 
-    all_search_results = search_results_query + search_results_sum
-    search_results = sorted(all_search_results, key=lambda x: x['score'],
-                            reverse=True)
+    # Search based on user query first
+    if user_content:
+        search_query = SEARCH_INSTRUCTION + user_content
+        search_results_query = await db_lookup(search_query, embeddings_model)
+        search_results.extend(search_results_query)
 
+    # Only search based on response if we have content
+    if response_content:
+        search_summ_message = SEARCH_INSTRUCTION + response_content
+        search_results_sum = await db_lookup(search_summ_message,
+                                             embeddings_model)
+        search_results.extend(search_results_sum)
+
+    # Remove duplicates (based on URL) and sort by score
+    unique_results = {}
+    for result in search_results:
+        url = result.get('url')
+        if url in unique_results:
+            # Keep the result with higher score
+            if result.get('score', 0) > unique_results[url].get('score', 0):
+                unique_results[url] = result
+        else:
+            unique_results[url] = result
+
+    return sorted(list(unique_results.values()),
+                  key=lambda x: x.get('score', 0), reverse=True)
+
+
+async def display_search_results(search_results):
+    """Helper function to display search results"""
     search_message = ""
     for result in search_results:
         score = result.get('score', 0)
@@ -185,17 +271,28 @@ async def main(message: cl.Message):
     if search_message != "":
         await cl.Message(content="Top similar bugs:\n" + search_message).send()
 
-    user_id = cl.user_session.get("id")
 
-    record = {
-        "conversation_id": user_id,
-        "create_at": msg.created_at,
-        "message_id": msg.id,
-        "prompt": message.content,
-        "search_results": search_results,
-        "model_reply": msg.content,
-        "settings": model_settings,
-        "feedback": None
-    }
-    collection.insert_one(record)
-    await msg.send()
+def save_conversation_data(user_message, response_msg, model_settings,
+                           search_results):
+    """Helper function to save conversation data to database"""
+    if not DB_AVAILABLE or COLLECTION is None:
+        cl.logger.warning("MongoDB is not available - " +
+                          "conversation data will not be saved")
+        return
+
+    try:
+        user_id = cl.user_session.get("id")
+        record = {
+            "conversation_id": user_id,
+            "create_at": response_msg.created_at,
+            "message_id": response_msg.id,
+            "prompt": user_message.content,
+            "search_results": search_results,
+            "model_reply": response_msg.content,
+            "settings": model_settings,
+            "feedback": None
+        }
+        COLLECTION.insert_one(record)
+    except PyMongoError as e:
+        cl.logger.error(f"Failed to save conversation data: {str(e)}")
+        # Continue execution without crashing
