@@ -33,13 +33,13 @@ default_n = os.environ.get("DEFAULT_MODEL_N", 1)
 
 db_url = os.environ.get("DB_URL",
                         'mongodb://mongoadmin:<changeme>@<changeme>:27017/')
-default_db_name = os.environ.get("DEFAULT_DB_NAME",'conversations')
+default_db_name = os.environ.get("DEFAULT_DB_NAME", 'conversations')
 default_collection_name = os.environ.get("DEFAULT_COLLECTION_NAME", 'debug-collection')
 vectordb_url = os.environ.get("VECTORDB_URL", '<changeme>')
 
 # Vector Storage client
 vectordb_client = QdrantClient(vectordb_url, port=6333)
-vectordb_collection_name =  os.environ.get("VECTORDB_COLLECTION_NAME", 'all-jira-tickets')
+vectordb_collection_name = os.environ.get("VECTORDB_COLLECTION_NAME", 'all-jira-tickets')
 
 # Message history storage
 db_client = MongoClient(db_url)
@@ -47,13 +47,14 @@ conv_db = db_client[default_db_name]
 collection = conv_db[default_collection_name]
 
 llm = AsyncOpenAI(
-    base_url = llm_api_url,
-    organization = '',
-    api_key = '<changeme>')
+    base_url=llm_api_url,
+    organization='',
+    api_key='<changeme>')
+
 
 async def db_lookup(search_string: str,
-                   model_name: str, search_top_n: int = 5,
-                   search_sensitive: float = 0.8) -> list:
+                    model_name: str, search_top_n: int = 5,
+                    search_sensitive: float = 0.8) -> list:
     """
     Search the vector database for relevant content based on the input query.
     Args:
@@ -66,7 +67,8 @@ async def db_lookup(search_string: str,
     """
     results = []
     embedding = await llm.embeddings.create(model=model_name,
-        input=search_string, encoding_format='float')
+                                            input=search_string,
+                                            encoding_format='float')
     embedding = embedding.data[0].embedding
     search_results = vectordb_client.search(collection_name=vectordb_collection_name,
                                             query_vector=embedding,
@@ -121,6 +123,7 @@ async def init_chat():
         url=LOGO_URL,
     ).send()
 
+
 @cl.action_callback("feedback")
 async def on_action(action):
     """
@@ -130,6 +133,7 @@ async def on_action(action):
     filter_msg = {"message_id": action.forId}
     value = {"$set": {"feedback": action.value}}
     collection.update_one(filter_msg, value)
+
 
 @cl.on_message
 async def main(message: cl.Message):
@@ -154,7 +158,7 @@ async def main(message: cl.Message):
         async for stream_resp in await llm.chat.completions.create(
             messages=message_history, **model_settings
         ):
-            if token:= stream_resp.choices[0].delta.content or "":
+            if token := stream_resp.choices[0].delta.content or "":
                 await msg.stream_token(token)
     else:
         content = await llm.chat.completions.create(
