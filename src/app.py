@@ -1,126 +1,74 @@
-"""
-Chainlit-based chatbot for Root Cause Analysis assistance with RAG
-capabilities.
-"""
-# Standard libs
+# Common libs
+from openai import AsyncOpenAI
 import os
 
-# Third-party libs
-try:
-    import openai
-    import chainlit as cl
-    from chainlit.input_widget import Select, Switch, Slider
-    from pymongo import MongoClient
-    from qdrant_client import QdrantClient
-except ImportError as e:
-    print(f"Error importing required libraries: {e}")
-    print("openai chainlit pymongo qdrant-client")
-    raise
+# UI
+import chainlit as cl
+from chainlit.input_widget import Select, Switch, Slider
 
+# DBs clients
+from pymongo import MongoClient
+from qdrant_client import QdrantClient
 
-openai.api_base = os.environ.get("OPENAI_API_BASE", "http://<changeme>/v1")
-openai.api_key = os.environ.get("OPENAI_API_KEY", "RedHat")
+SEARCH_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 
-default_model = os.environ.get("DEFAULT_MODEL_NAME")
-if default_model is None:
-    default_model = []
-    model_list = openai.Model.list()
-    for model_name in model_list["data"]:
-        if "completions" in model_name["id"].split("/"):
-            default_model.append(model_name["id"])
-else:
-    default_model = [default_model]
-
-default_embeddings_model = os.environ.get("DEFAULT_EMBEDDINGS_MODEL")
-if default_embeddings_model is None:
-    default_embeddings_model = []
-    model_list = openai.Model.list()
-    for model_name in model_list["data"]:
-        if "embeddings" in model_name["id"].split("/"):
-            default_embeddings_model.append(model_name["id"])
-else:
-    default_embeddings_model = [default_embeddings_model]
+llm_api_url = os.environ.get("LLM_API_URL", 'http://localhost/v1')
+generative_model = os.environ.get("DEFAULT_MODEL_NAME", '/models/completions/Mistral-7B-Instruct-v0.2')
+embeddings_model = os.environ.get("DEFAULT_EMBEDDINGS_MODEL",'/models/embeddings/bge-large-en-v1.5')
 
 default_temperature = os.environ.get("DEFAULT_MODEL_TEMPERATURE", 0.7)
 default_max_tokens = os.environ.get("DEFAULT_MODEL_MAX_TOKENS", 1024)
 default_top_p = os.environ.get("DEFAULT_MODEL_TOP_P", 1)
 default_n = os.environ.get("DEFAULT_MODEL_N", 1)
 
-db_url = os.environ.get("DB_URL", "mongodb://<changeme>")
-default_db_name = os.environ.get("DEFAULT_DB_NAME", "conversations")
-default_collection_name = os.environ.get("DEFAULT_COLLECTION_NAME",
-                                         "conv-collection")
-vectordb_url = os.environ.get("VECTORDB_URL", "localhost")
+db_url = os.environ.get("DB_URL", 
+                        'mongodb://mongoadmin:redhat@localhost:27017/')
+default_db_name = os.environ.get("DEFAULT_DB_NAME", 'conversations')
+default_collection_name = os.environ.get("DEFAULT_COLLECTION_NAME", 'debug-collection')
+vectordb_url = os.environ.get("VECTORDB_URL", 'localhost')
 
 # Vector Storage client
 vectordb_client = QdrantClient(vectordb_url, port=6333)
+vectordb_collection_name =  os.environ.get("VECTORDB_COLLECTION_NAME", 'all-jira-tickets')
 
 # Message history storage
 db_client = MongoClient(db_url)
 conv_db = db_client[default_db_name]
 collection = conv_db[default_collection_name]
 
-default_logo_url = os.environ.get(
-    "DEFAULT_LOGO_URL",
-    "https://www.redhat.com/rhdc/managed-files/" +
-    "Asset-Red_Hat-Logo_page-General-This-RGB.svg"
-)
-default_organization = os.environ.get(
-    "DEFAULT_ORGANIZATION", "Red Hat"
-)
+llm = AsyncOpenAI(
+    base_url = llm_api_url,
+    organization = '',
+    api_key = 'redhat')
 
-
-def db_lookup(search_string: str, embedding_model: str, search_top_n: int = 3,
-              search_sensitive: float = 0.83) -> list:
-    """
-    Search the vector database for relevant content based on the input query.
-
-    Args:
-        search_string: The query to search for
-        embedding_model: The model to use for creating embeddings
-        search_top_n: Maximum number of results to return
-        search_sensitive: Minimum similarity score threshold
-    Returns:
-        List of search results with text and metadata
-    """
+async def db_lookup(search_string: str, 
+                   model_name: str, search_top_n: int = 5, 
+                   search_sensitive: float = 0.8) -> list:
     results = []
-    embedding = openai.Embedding.create(
-        input=search_string, model=embedding_model
-        )["data"][0]["embedding"]
-    search_results = vectordb_client.search(collection_name="rca",
-                                            query_vector=embedding,
+    embedding = await llm.embeddings.create(model=model_name,
+        input=search_string, encoding_format='float')
+    embedding = embedding.data[0].embedding
+    search_results = vectordb_client.search(collection_name=vectordb_collection_name, 
+                                            query_vector=embedding, 
                                             limit=search_top_n)
     for res in search_results:
         if res.score >= search_sensitive:
-            res = {
-                "text": res.payload.get("page_content", ""),
-                "url": res.payload.get("url", None),
-                "image": res.payload.get("image", None),
-                "screen": res.payload.get("image", None),
-            }
-            results.append(res)
+            results.append(
+                {
+                    "score": res.score,
+                    "url": res.payload['url']
+                })
     return results
 
 
 @cl.on_chat_start
 async def init_chat():
-    """
-    Initialize the chat session with default settings and user interface
-    elements.
-    Sets up model selection, parameters, and initial message history.
-    """
     settings = await cl.ChatSettings(
         [
             Select(
                 id="model",
                 label="Chat - Model",
-                values=default_model,
-                initial_index=0,
-            ),
-            Select(
-                id="embeddings_model",
-                label="Embeddings - Model",
-                values=default_embeddings_model,
+                values=[generative_model],
                 initial_index=0,
             ),
             Slider(
@@ -143,91 +91,59 @@ async def init_chat():
             ]
     ).send()
     cl.user_session.set("model_settings", settings)
-    cl.user_session.set(
-        "message_history",
-        [
-            {
-                "role": "system",
-                "content": "You are an CI assistant. " +
-                "You help with CI failures and help define RCA."
-            }
-        ],
-    )
     await cl.Avatar(
-        name=default_organization,
-        url=default_logo_url,
+        name="OpenStack",
+        url="https://www.redhat.com/rhdc/managed-files/Asset-Red_Hat-Logo_page-General-This-RGB.svg",
     ).send()
-
 
 @cl.action_callback("feedback")
 async def on_action(action):
-    """
-    Handle user feedback on chat responses.
-    Updates the database with the feedback value.
-    """
-    query_filter = {"message_id": action.forId}
+    filter = {"message_id": action.forId}
     value = {"$set": {"feedback": action.value}}
-    collection.update_one(query_filter, value)
-    await cl.Message(
-        content="Thank you! Your feedback will be used for future " +
-        "improvements.").send()
-
+    collection.update_one(filter, value)
 
 @cl.on_message
-async def main(message: str):
-    """
-    Main message handler that processes user input, searches for context,
-    and generates AI responses.
-    """
-    message_history = cl.user_session.get("message_history")
+async def main(message: cl.Message):
     model_settings = cl.user_session.get("model_settings")
-    constructed_prompt = ""
-
-    try:
-        search_results = db_lookup(message, model_settings["embeddings_model"])
-        if len(search_results) > 0:
-            constructed_prompt = ("Answer the question based only on the "
-                                  "following context:")
-            for s_result in search_results:
-                if s_result["text"] != "":
-                    constructed_prompt += s_result["text"] + "\n"
-            constructed_prompt += "Question: " + message
-    except (openai.error.OpenAIError, ValueError, KeyError) as e:
-        search_results = ["Search error"]
-        cl.logger.debug(f"Search error: {e}")
-
-    if constructed_prompt != "":
-        message_history.append({"role": "user", "content": constructed_prompt})
-        model_settings["temperature"] = 0.1
-    else:
-        message_history.append({"role": "user", "content": message})
+    message_history = [{"role": "system", "content": "Your name is Openstack. Help to investigate the issue"}]
+    message_history.append({"role": "user", "content": message.content})
+    
+    # cl.logger.info(message_history)
 
     actions = [
-            cl.Action(
-                name="feedback",
-                value="positive",
-                label="Awesome!",
-                description="Positive feedback"
-            ),
-            cl.Action(
-                name="feedback",
-                value="negative",
-                label="Report a message",
-                description="Negative feedback"
-            )
+            cl.Action(name="feedback", value="positive", label="Affirmative", description="Positive feedback"),
+            cl.Action(name="feedback", value="negative", label="Negative", description="Negative feedback")
         ]
     msg = cl.Message(content="", actions=actions)
-    if model_settings["stream"]:
-        async for stream_resp in await openai.ChatCompletion.acreate(
+    
+    if model_settings['stream']:
+        async for stream_resp in await llm.chat.completions.create(
             messages=message_history, **model_settings
         ):
-            token = stream_resp.choices[0]["delta"].get("content", "")
-            await msg.stream_token(token)
+            if token:= stream_resp.choices[0].delta.content or "":
+                await msg.stream_token(token)
     else:
-        content = await openai.ChatCompletion.acreate(
+        content = await llm.chat.completions.create(
             messages=message_history, **model_settings)
-        msg.content = content.choices[0]["message"].get("content", "")
-    message_history.append({"role": "assistant", "content": msg.content})
+        msg.content = content.choices[0].message.content
+    
+    # Searching
+    search_query = SEARCH_INSTRUCTION + message.content
+    search_summ_message = SEARCH_INSTRUCTION + msg.content
+
+    search_results_query = await db_lookup(search_query, embeddings_model) 
+    search_results_sum = await db_lookup(search_summ_message, embeddings_model)
+    
+    all_search_results = search_results_query + search_results_sum
+    search_results = sorted(all_search_results, key=lambda x: x['score'], reverse=True)
+
+    search_message = ""
+    for result in search_results:
+        score = result.get('score', 0)
+        if score >= 0.8:
+            search_message += f'🔗 {result["url"]}, Similarity Score: {score}\n'
+    if search_message != "":
+        await cl.Message(content="Top similar bugs:\n" + search_message).send()
 
     user_id = cl.user_session.get("id")
 
@@ -235,7 +151,7 @@ async def main(message: str):
         "conversation_id": user_id,
         "create_at": msg.created_at,
         "message_id": msg.id,
-        "prompt": message,
+        "prompt": message.content,
         "search_results": search_results,
         "model_reply": msg.content,
         "settings": model_settings,
