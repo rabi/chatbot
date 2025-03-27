@@ -17,14 +17,17 @@ except ImportError as e:
     print("openai chainlit pymongo qdrant-client")
     raise
 
-SEARCH_INSTRUCTION = "Represent this sentence for searching relevant passages: "
-LOGO_URL = "https://www.redhat.com/rhdc/managed-files/Asset-Red_Hat-Logo_page-General-This-RGB.svg"
+SEARCH_INSTRUCTION = "Represent this sentence " \
+                "for searching relevant passages: "
+LOGO_URL = "https://www.redhat.com/rhdc/managed-files/" \
+            "Asset-Red_Hat-Logo_page-General-This-RGB.svg"
 
 llm_api_url = os.environ.get("LLM_API_URL", 'http://<changeme>/v1')
+llm_api_key = os.environ.get("LLM_API_KEY")
 generative_model = os.environ.get("DEFAULT_MODEL_NAME",
-                                  '/models/completions/Mistral-7B-Instruct-v0.2')
+                                  'Mistral-7B-Instruct-v0.2')
 embeddings_model = os.environ.get("DEFAULT_EMBEDDINGS_MODEL",
-                                  '/models/embeddings/bge-large-en-v1.5')
+                                  'bge-large-en-v1.5')
 
 default_temperature = os.environ.get("DEFAULT_MODEL_TEMPERATURE", 0.7)
 default_max_tokens = os.environ.get("DEFAULT_MODEL_MAX_TOKENS", 1024)
@@ -34,12 +37,14 @@ default_n = os.environ.get("DEFAULT_MODEL_N", 1)
 db_url = os.environ.get("DB_URL",
                         'mongodb://mongoadmin:<changeme>@<changeme>:27017/')
 default_db_name = os.environ.get("DEFAULT_DB_NAME", 'conversations')
-default_collection_name = os.environ.get("DEFAULT_COLLECTION_NAME", 'debug-collection')
+default_collection_name = os.environ.get("DEFAULT_COLLECTION_NAME",
+                                         'debug-collection')
 vectordb_url = os.environ.get("VECTORDB_URL", '<changeme>')
 
 # Vector Storage client
 vectordb_client = QdrantClient(vectordb_url, port=6333)
-vectordb_collection_name = os.environ.get("VECTORDB_COLLECTION_NAME", 'all-jira-tickets')
+vectordb_collection_name = os.environ.get("VECTORDB_COLLECTION_NAME",
+                                          'all-jira-tickets')
 
 # Message history storage
 db_client = MongoClient(db_url)
@@ -49,7 +54,7 @@ collection = conv_db[default_collection_name]
 llm = AsyncOpenAI(
     base_url=llm_api_url,
     organization='',
-    api_key='<changeme>')
+    api_key=llm_api_key)
 
 
 async def db_lookup(search_string: str,
@@ -70,9 +75,10 @@ async def db_lookup(search_string: str,
                                             input=search_string,
                                             encoding_format='float')
     embedding = embedding.data[0].embedding
-    search_results = vectordb_client.search(collection_name=vectordb_collection_name,
-                                            query_vector=embedding,
-                                            limit=search_top_n)
+    search_results = vectordb_client.search(
+        collection_name=vectordb_collection_name,
+        query_vector=embedding,
+        limit=search_top_n)
     for res in search_results:
         if res.score >= search_sensitive:
             results.append(
@@ -143,7 +149,8 @@ async def main(message: cl.Message):
     """
     model_settings = cl.user_session.get("model_settings")
     message_history = [{"role": "system",
-                        "content": "Your name is Openstack. Help to investigate the issue"}]
+                        "content": "Your name is Openstack. "
+                        "Help to investigate the issue"}]
     message_history.append({"role": "user", "content": message.content})
 
     actions = [
@@ -173,7 +180,8 @@ async def main(message: cl.Message):
     search_results_sum = await db_lookup(search_summ_message, embeddings_model)
 
     all_search_results = search_results_query + search_results_sum
-    search_results = sorted(all_search_results, key=lambda x: x['score'], reverse=True)
+    search_results = sorted(all_search_results, key=lambda x: x['score'],
+                            reverse=True)
 
     search_message = ""
     for result in search_results:
