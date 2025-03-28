@@ -13,7 +13,7 @@ try:
     from pymongo import MongoClient
     from pymongo.errors import ConnectionFailure, PyMongoError
     from qdrant_client import QdrantClient
-    from qdrant_client.http.exceptions import QdrantException
+    from qdrant_client.http.exceptions import ApiException
 except ImportError as e:
     print(f"Error importing required libraries: {e}")
     print("openai chainlit pymongo qdrant-client")
@@ -23,7 +23,7 @@ SEARCH_INSTRUCTION = "Represent this sentence " \
                 "for searching relevant passages: "
 
 llm_api_url = os.environ.get("LLM_API_URL", 'http://<changeme>/v1')
-llm_api_key = os.environ.get("LLM_API_KEY")
+llm_api_key = os.environ.get("OPENAI_API_KEY")
 generative_model = os.environ.get("DEFAULT_MODEL_NAME",
                                   'Mistral-7B-Instruct-v0.2')
 embeddings_model = os.environ.get("DEFAULT_EMBEDDINGS_MODEL",
@@ -113,7 +113,7 @@ async def db_lookup(search_string: str,
                         "url": res.payload['url']
                     })
         return results
-    except (QdrantException, ValueError, KeyError) as e:
+    except (ApiException, ValueError, KeyError) as e:
         cl.logger.error(f"Error in db_lookup: {str(e)}")
         # Return empty results on error instead of crashing
         return results
