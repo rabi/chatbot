@@ -1,7 +1,7 @@
 .PHONY: help install-deps tox
 
 install-pdm: ## Install required utilities/tools
-	@command -v pdm > /dev/null || { echo >&2 "pdm is not installed. Installing..."; pip3.12 install --upgrade pip pdm; }
+	@command -v pdm > /dev/null || { echo >&2 "pdm is not installed. Installing..."; pip install --upgrade pip pdm; }
 
 install-global: install-pdm pdm-lock-check ## Install rca-accelerator-chatbot to global Python directories
 	pdm install --global --project .
