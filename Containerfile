@@ -4,6 +4,7 @@ FROM registry.access.redhat.com/ubi9/python-312
 ENV DB_URL=mongodb://localhost
 ENV VECTORDB_URL=localhost
 ENV VECTORDB_COLLECTION_NAME=None
+ENV OPENAI_API_KEY=CHANGEME
 
 # Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
