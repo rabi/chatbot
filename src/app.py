@@ -22,8 +22,8 @@ except ImportError as import_exception:
 SEARCH_INSTRUCTION = "Represent this sentence " \
                 "for searching relevant passages: "
 
-llm_api_url = os.environ.get("LLM_API_URL", 'http://<changeme>/v1')
-llm_api_key = os.environ.get("OPENAI_API_KEY")
+gen_llm_api_url = os.environ.get("LLM_API_URL", 'http://<changeme>/v1')
+gen_llm_api_key = os.environ.get("OPENAI_API_KEY")
 emb_llm_api_url = os.environ.get("EMBEDDINGS_LLM_API_URL",
                                  'http://<changeme>/v1')
 emb_llm_api_key = os.environ.get("EMBEDDINGS_LLM_API_API_KEY")
@@ -65,10 +65,10 @@ except (ConnectionFailure, PyMongoError) as exception:
     COLLECTION = None
     DB_AVAILABLE = False
 
-llm = AsyncOpenAI(
-    base_url=llm_api_url,
+gen_llm = AsyncOpenAI(
+    base_url=gen_llm_api_url,
     organization='',
-    api_key=llm_api_key)
+    api_key=gen_llm_api_key)
 
 emb_llm = AsyncOpenAI(
     base_url=emb_llm_api_url,
@@ -225,7 +225,7 @@ async def process_message_and_get_response(user_message, response_msg,
     message_history.append({"role": "user", "content": user_message.content})
 
     if model_settings['stream']:
-        async for stream_resp in await llm.chat.completions.create(
+        async for stream_resp in await gen_llm.chat.completions.create(
             messages=message_history, **model_settings
         ):
             # Check if choices exists and has at least one element
@@ -233,7 +233,7 @@ async def process_message_and_get_response(user_message, response_msg,
                 if token := stream_resp.choices[0].delta.content or "":
                     await response_msg.stream_token(token)
     else:
-        content = await llm.chat.completions.create(
+        content = await gen_llm.chat.completions.create(
             messages=message_history, **model_settings)
         response_msg.content = content.choices[0].message.content
 
