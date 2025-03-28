@@ -14,8 +14,8 @@ try:
     from pymongo.errors import ConnectionFailure, PyMongoError
     from qdrant_client import QdrantClient
     from qdrant_client.http.exceptions import ApiException
-except ImportError as e:
-    print(f"Error importing required libraries: {e}")
+except ImportError as import_exception:
+    print(f"Error importing required libraries: {import_exception}")
     print("openai chainlit pymongo qdrant-client")
     raise
 
@@ -55,8 +55,8 @@ try:
     COLLECTION = CONV_DB[default_collection_name]
     DB_AVAILABLE = True
     cl.logger.info("Successfully connected to MongoDB")
-except (ConnectionFailure, PyMongoError) as e:
-    cl.logger.error(f"Failed to connect to MongoDB: {str(e)}")
+except (ConnectionFailure, PyMongoError) as exception:
+    cl.logger.error("Failed to connect to MongoDB: %s", str(exception))
     DB_CLIENT = None
     CONV_DB = None
     COLLECTION = None
@@ -91,11 +91,11 @@ async def db_lookup(search_string: str,
 
         if not embedding_response:
             cl.logger.error("Failed to get embeddings: " +
-                            f"No response from model {model_name}")
+                            "No response from model %s", model_name)
             return results
         if not embedding_response.data or len(embedding_response.data) == 0:
             cl.logger.error("Failed to get embeddings: " +
-                            f"Empty response for model {model_name}")
+                            "Empty response for model %s", model_name)
             return results
 
         embedding = embedding_response.data[0].embedding
@@ -114,7 +114,7 @@ async def db_lookup(search_string: str,
                     })
         return results
     except (ApiException, ValueError, KeyError) as e:
-        cl.logger.error(f"Error in db_lookup: {str(e)}")
+        cl.logger.error("Error in db_lookup: %s", str(e))
         # Return empty results on error instead of crashing
         return results
 
@@ -173,7 +173,7 @@ async def on_action(action):
         value = {"$set": {"feedback": action.payload.get("feedback")}}
         COLLECTION.update_one(filter_msg, value)
     except PyMongoError as e:
-        cl.logger.error(f"Failed to save feedback: {str(e)}")
+        cl.logger.error("Failed to save feedback: %s", str(e))
 
 
 @cl.on_message
@@ -186,11 +186,11 @@ async def main(message: cl.Message):
 
     # Create response message with feedback actions
     actions = [
-            cl.Action(name="feedback", value="positive",
-                      label="Affirmative", description="Positive feedback",
+            cl.Action(name="feedback",
+                      label="Affirmative",
                       payload={"feedback": "positive"}),
-            cl.Action(name="feedback", value="negative",
-                      label="Negative", description="Negative feedback",
+            cl.Action(name="feedback",
+                      label="Negative",
                       payload={"feedback": "negative"})
         ]
     msg = cl.Message(content="", actions=actions)
@@ -295,5 +295,5 @@ def save_conversation_data(user_message, response_msg, model_settings,
         }
         COLLECTION.insert_one(record)
     except PyMongoError as e:
-        cl.logger.error(f"Failed to save conversation data: {str(e)}")
+        cl.logger.error("Failed to save conversation data: %s", str(e))
         # Continue execution without crashing

@@ -1,0 +1,21 @@
+[project]
+name = "rca-accelerator-chatbot"
+version = "0.1.0"
+description = "Useful chatbot that can be used to do RCA of CI errors."
+authors = []
+dependencies = [
+    "openai==1.68.2",
+    "chainlit==2.4.302",
+    "pymongo==4.11.3",
+    "qdrant-client==1.13.3",
+]
+requires-python = "==3.12.*"
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "tox==4.25.0",
+    "pylint==3.0.0",
+    "fastapi==0.115.8",
+    "flake8==7.0.0",
+    "ruff==0.9.0",
+]

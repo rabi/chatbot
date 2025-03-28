@@ -1,26 +1,22 @@
 FROM registry.access.redhat.com/ubi9/python-312
 
-# Database environment
 ENV DB_URL=mongodb://localhost
 ENV VECTORDB_URL=localhost
 ENV VECTORDB_COLLECTION_NAME=None
 ENV OPENAI_API_KEY=CHANGEME
 
-# Install Python dependencies
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install --upgrade pip
-RUN pip3 --no-cache-dir install -r /tmp/requirements.txt
-
-# Deploy the app
 USER root
-RUN mkdir -p /app && \
-    chgrp -R 0 /app && \
-    chmod -R g=u /app
-COPY src/ /app
+RUN groupadd -g 65532 chatgroup && \
+    useradd -u 65532 -g chatgroup chatuser
 
 WORKDIR /app
-USER 65532:65532
+RUN chown -R chatuser:chatgroup /app
 
+COPY src/ .
+COPY pdm.lock pyproject.toml Makefile .
+RUN make install-pdm install-global
+
+USER chatuser
 EXPOSE 8000
 
 CMD ["chainlit", "run", "app.py"]

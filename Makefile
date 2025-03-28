@@ -1,8 +1,19 @@
 .PHONY: help install-deps tox
 
-install-deps: ## Install Python dependencies
-	pip install --upgrade pip
-	pip install -r requirements.txt
+install-pdm: ## Install required utilities/tools
+	@command -v pdm > /dev/null || { echo >&2 "pdm is not installed. Installing..."; pip install --upgrade pip pdm; }
+
+install-global: install-pdm pdm-lock-check ## Install rca-accelerator-chatbot to global Python directories
+	pdm install --global --project .
+
+install-deps: install-pdm ## Install Python dependencies
+	pdm sync
+
+install-dev-deps: install-pdm ## Install Python dependencies
+	pdm sync --dev
+
+pdm-lock-check: ## Check that the pdm.lock file is in a good shape
+	pdm lock --check
 
 tox: ## Run tox
 	tox
