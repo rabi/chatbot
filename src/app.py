@@ -7,7 +7,7 @@ import os
 
 # Third-party libs
 try:
-    from openai import AsyncOpenAI
+    from openai import AsyncOpenAI, OpenAIError
     import chainlit as cl
     from chainlit.input_widget import Select, Switch, Slider
     from pymongo import MongoClient
@@ -24,6 +24,9 @@ SEARCH_INSTRUCTION = "Represent this sentence " \
 
 llm_api_url = os.environ.get("LLM_API_URL", 'http://<changeme>/v1')
 llm_api_key = os.environ.get("OPENAI_API_KEY")
+emb_llm_api_url = os.environ.get("EMBEDDINGS_LLM_API_URL",
+                                 'http://<changeme>/v1')
+emb_llm_api_key = os.environ.get("EMBEDDINGS_LLM_API_API_KEY")
 generative_model = os.environ.get("DEFAULT_MODEL_NAME",
                                   'Mistral-7B-Instruct-v0.2')
 embeddings_model = os.environ.get("DEFAULT_EMBEDDINGS_MODEL",
@@ -67,6 +70,11 @@ llm = AsyncOpenAI(
     organization='',
     api_key=llm_api_key)
 
+emb_llm = AsyncOpenAI(
+    base_url=emb_llm_api_url,
+    organization='',
+    api_key=emb_llm_api_key)
+
 
 async def db_lookup(search_string: str,
                     model_name: str, search_top_n: int = 5,
@@ -83,7 +91,7 @@ async def db_lookup(search_string: str,
     """
     results = []
     try:
-        embedding_response = await llm.embeddings.create(
+        embedding_response = await emb_llm.embeddings.create(
             model=model_name,
             input=search_string,
             encoding_format='float'
@@ -113,7 +121,7 @@ async def db_lookup(search_string: str,
                         "url": res.payload['url']
                     })
         return results
-    except (ApiException, ValueError, KeyError) as e:
+    except (ApiException, OpenAIError, ValueError, KeyError) as e:
         cl.logger.error("Error in db_lookup: %s", str(e))
         # Return empty results on error instead of crashing
         return results
