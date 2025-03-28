@@ -169,7 +169,8 @@ async def on_action(action):
 
     try:
         filter_msg = {"message_id": action.forId}
-        value = {"$set": {"feedback": action.value}}
+        # Use action.value from payload instead of directly accessing it
+        value = {"$set": {"feedback": action.payload.get("feedback")}}
         COLLECTION.update_one(filter_msg, value)
     except PyMongoError as e:
         cl.logger.error(f"Failed to save feedback: {str(e)}")
