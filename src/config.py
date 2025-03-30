@@ -2,10 +2,9 @@
 import os
 
 # LLM settings
-GEN_LLM_API_URL = os.environ.get("LLM_API_URL", 'http://<changeme>/v1')
+GEN_LLM_API_URL = os.environ.get("LLM_API_URL")
 GEN_LLM_API_KEY = os.environ.get("OPENAI_API_KEY")
-EMB_LLM_API_URL = os.environ.get("EMBEDDINGS_LLM_API_URL",
-                                 'http://<changeme>/v1')
+EMB_LLM_API_URL = os.environ.get("EMBEDDINGS_LLM_API_URL")
 EMB_LLM_API_KEY = os.environ.get("EMBEDDINGS_LLM_API_API_KEY")
 GENERATIVE_MODEL = os.environ.get("DEFAULT_MODEL_NAME",
                                   'Mistral-7B-Instruct-v0.2')
@@ -19,14 +18,13 @@ DEFAULT_TOP_P = float(os.environ.get("DEFAULT_MODEL_TOP_P", 1))
 DEFAULT_N = int(os.environ.get("DEFAULT_MODEL_N", 1))
 
 # Database settings
-DB_URL = os.environ.get("DB_URL",
-                        'mongodb://mongoadmin:<changeme>@<changeme>:27017/')
+DB_URL = os.environ.get("DB_URL")
 DEFAULT_DB_NAME = os.environ.get("DEFAULT_DB_NAME", 'conversations')
 DEFAULT_COLLECTION_NAME = os.environ.get("DEFAULT_COLLECTION_NAME",
                                          'debug-collection')
 
 # Vector database settings
-VECTORDB_URL = os.environ.get("VECTORDB_URL", '<changeme>')
+VECTORDB_URL = os.environ.get("VECTORDB_URL")
 VECTORDB_PORT = int(os.environ.get("VECTORDB_PORT", 6333))
 VECTORDB_COLLECTION_NAME = os.environ.get("VECTORDB_COLLECTION_NAME",
                                           'all-jira-tickets')
