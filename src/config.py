@@ -31,13 +31,13 @@ class Config:
         self.db_url = os.environ.get("DB_URL")
         self.default_db_name = os.environ.get(
             "DEFAULT_DB_NAME", 'conversations')
-        self.default_collection_name = os.environ.get(
-            "DEFAULT_COLLECTION_NAME", 'debug-collection')
+        self.default_db_collection_name = os.environ.get(
+            "DEFAULT_DB_COLLECTION_NAME", 'rca-msg-data')
         self.vectordb_url = os.environ.get("VECTORDB_URL")
         self.vectordb_api_key = os.environ.get("VECTORDB_API_KEY")
         self.vectordb_port = int(os.environ.get("VECTORDB_PORT", 6333))
         self.vectordb_collection_name = os.environ.get(
-            "VECTORDB_COLLECTION_NAME", 'all-jira-tickets')
+            "VECTORDB_COLLECTION_NAME", 'rca-knowledge-base')
         self.search_instruction = os.environ.get(
             "SEARCH_INSTRUCTION",
             "Represent this sentence for searching relevant passages: "

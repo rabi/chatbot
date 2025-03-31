@@ -46,11 +46,11 @@ The application can be configured using the following environment variables:
 
 * `DB_URL`: MongoDB connection URL
 * `DEFAULT_DB_NAME`: Name of the database (default: 'conversations')
-* `DEFAULT_COLLECTION_NAME`: Name of the collection (default: 'debug-collection')
+* `DEFAULT_DB_COLLECTION_NAME`: Name of the collection (default: 'rca-msg-data')
 
 ### Vector Database Settings
 
 * `VECTORDB_URL`: URL for the vector database
 * `VECTORDB_API_KEY`: API key for the vector database
 * `VECTORDB_PORT`: Port for the vector database (default: 6333)
-* `VECTORDB_COLLECTION_NAME`: Collection name in the vector database (default: 'all-jira-tickets')
+* `VECTORDB_COLLECTION_NAME`: Collection name in the vector database (default: 'rca-knowledge-base')
