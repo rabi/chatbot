@@ -3,7 +3,6 @@ import chainlit as cl
 
 from generation import process_message_and_get_response
 from embeddings import db_lookup
-from conversation import conversation_store
 from config import config
 
 
@@ -81,6 +80,13 @@ def append_searched_urls(search_results, resp):
         resp.content += "\n\nTop similar bugs:\n" + search_message
 
 
+def update_msg_count():
+    """Update the number of messages in the conversation."""
+    counter = cl.user_session.get("counter")
+    counter += 1
+    cl.user_session.set("counter", counter)
+
+
 async def handle_user_message(message: cl.Message):
     """
     Main handler for user messages.
@@ -90,14 +96,7 @@ async def handle_user_message(message: cl.Message):
     """
     model_settings = cl.user_session.get("model_settings")
 
-    # Create response message with feedback actions
-    actions = [
-        cl.Action(name="feedback", label="Affirmative",
-                  payload={"feedback": "positive"}),
-        cl.Action(name="feedback", label="Negative",
-                  payload={"feedback": "negative"})
-    ]
-    resp = cl.Message(content="", actions=actions)
+    resp = cl.Message(content="")
 
     search_results = await perform_search(message.content)
     if search_results:
@@ -110,15 +109,5 @@ async def handle_user_message(message: cl.Message):
     # Extend response with searched jira urls
     append_searched_urls(search_results, resp)
 
-    # Save conversation data
-    user_id = cl.user_session.get("id")
-    conversation_data = {
-        "user_id": user_id,
-        "user_message": message.content,
-        "ai_response": resp.content,
-        "model_settings": model_settings,
-        "search_results": search_results
-    }
-    conversation_store.save(conversation_data)
-
+    update_msg_count()
     await resp.send()

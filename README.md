@@ -42,11 +42,10 @@ The application can be configured using the following environment variables:
 * `DEFAULT_MODEL_TOP_P`: Top-p sampling parameter (default: 1)
 * `DEFAULT_MODEL_N`: Number of completions to generate (default: 1)
 
-### Database Settings
+### Chatbot Database Settings
 
-* `DB_URL`: MongoDB connection URL
-* `DEFAULT_DB_NAME`: Name of the database (default: 'conversations')
-* `DEFAULT_DB_COLLECTION_NAME`: Name of the collection (default: 'rca-msg-data')
+* `DATABASE_URL`: PostgreSQL connection URL for the chatbot sessions
+* `AUTH_DATABASE_URL`: PostgreSQL connection URL for storing users and passwords
 
 ### Vector Database Settings
 

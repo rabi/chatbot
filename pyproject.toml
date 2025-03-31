@@ -6,8 +6,11 @@ authors = []
 dependencies = [
     "openai==1.68.2",
     "chainlit==2.4.302",
-    "pymongo==4.11.3",
     "qdrant-client==1.13.3",
+    "asyncpg>=0.30.0",
+    "bcrypt==4.3.0",
+    "sqlalchemy>=2.0.40",
+    "psycopg2-binary>=2.9.10",
 ]
 requires-python = "==3.12.*"
 

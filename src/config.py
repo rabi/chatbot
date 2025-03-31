@@ -28,11 +28,7 @@ class Config:
         self.default_top_p = float(
             os.environ.get("DEFAULT_MODEL_TOP_P", 1))
         self.default_n = int(os.environ.get("DEFAULT_MODEL_N", 1))
-        self.db_url = os.environ.get("DB_URL")
-        self.default_db_name = os.environ.get(
-            "DEFAULT_DB_NAME", 'conversations')
-        self.default_db_collection_name = os.environ.get(
-            "DEFAULT_DB_COLLECTION_NAME", 'rca-msg-data')
+        self.auth_database_url = os.environ.get("AUTH_DATABASE_URL")
         self.vectordb_url = os.environ.get("VECTORDB_URL")
         self.vectordb_api_key = os.environ.get("VECTORDB_API_KEY")
         self.vectordb_port = int(os.environ.get("VECTORDB_PORT", 6333))
@@ -50,6 +46,10 @@ class Config:
             "SYSTEM_PROMPT",
             "You are a CI assistant. You help with CI failures " +
             "and help define RCA."
+        )
+        self.welcome_message = os.environ.get(
+            "WELCOME_MESSAGE",
+            "I am your CI assistant. I will help you with your RCA."
         )
 
 
