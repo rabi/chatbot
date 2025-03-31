@@ -98,7 +98,8 @@ class QdrantVectorStore(VectorStore):
                 if res.score >= similarity_threshold:
                     results.append({
                         "score": res.score,
-                        "url": res.payload['url']
+                        "url": res.payload['url'],
+                        "text": res.payload['text']
                     })
             return results
         except ApiException as e:

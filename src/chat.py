@@ -7,13 +7,12 @@ from conversation import conversation_store
 from config import config
 
 
-async def perform_search(user_content, response_content):
+async def perform_search(user_content):
     """
-    Perform search with user input and AI response.
+    Perform search with user input.
 
     Args:
         user_content: User's input query
-        response_content: AI's response content
 
     Returns:
         List of unique search results sorted by relevance
@@ -26,13 +25,6 @@ async def perform_search(user_content, response_content):
         search_results_query = await db_lookup(search_query,
                                                config.embeddings_model)
         search_results.extend(search_results_query)
-
-    # Only search based on response if we have content
-    if response_content:
-        search_summ_message = config.search_instruction + response_content
-        search_results_sum = await db_lookup(search_summ_message,
-                                             config.embeddings_model)
-        search_results.extend(search_results_sum)
 
     # Remove duplicates (based on URL) and sort by score
     unique_results = {}
@@ -49,14 +41,44 @@ async def perform_search(user_content, response_content):
                   key=lambda x: x.get('score', 0), reverse=True)
 
 
-async def display_search_results(search_results):
-    """Display search results to the user."""
+def search_results_for_context(search_results) -> str:
+    """
+    Format search results into a readable string.
+
+    Args:
+        search_results: List of search results
+
+    Returns:
+        Formatted string with search results
+    """
+    if not search_results:
+        return "No relevant results found."
+
+    filtered = [
+        f"{res.get('text')}, Similarity Score: {res.get('score', 0)}"
+        for res in search_results
+    ]
+
+    if filtered:
+        return "\n".join(filtered)
+
+    return "No highly relevant results found."
+
+
+def append_searched_urls(search_results, resp):
+    """
+    Append search urls.
+
+    Args:
+        search_results: List of search results
+        resp: The response message object to populate
+    """
     search_message = ""
     for result in search_results:
         score = result.get('score', 0)
         search_message += f'🔗 {result["url"]}, Similarity Score: {score}\n'
     if search_message != "":
-        await cl.Message(content="Top similar bugs:\n" + search_message).send()
+        resp.content += "\n\nTop similar bugs:\n" + search_message
 
 
 async def handle_user_message(message: cl.Message):
@@ -75,24 +97,28 @@ async def handle_user_message(message: cl.Message):
         cl.Action(name="feedback", label="Negative",
                   payload={"feedback": "negative"})
     ]
-    msg = cl.Message(content="", actions=actions)
+    resp = cl.Message(content="", actions=actions)
+
+    search_results = await perform_search(message.content)
+    if search_results:
+        message.content += (f"\n\nReply in the following context:"
+                            f"\n{search_results_for_context(search_results)}")
 
     # Process user message and get AI response
-    await process_message_and_get_response(message, msg, model_settings)
+    await process_message_and_get_response(message, resp, model_settings)
 
-    # Perform search and display results
-    search_results = await perform_search(message.content, msg.content)
-    await display_search_results(search_results)
+    # Extend response with searched jira urls
+    append_searched_urls(search_results, resp)
 
     # Save conversation data
     user_id = cl.user_session.get("id")
     conversation_data = {
         "user_id": user_id,
         "user_message": message.content,
-        "ai_response": msg.content,
+        "ai_response": resp.content,
         "model_settings": model_settings,
         "search_results": search_results
     }
     conversation_store.save(conversation_data)
 
-    await msg.send()
+    await resp.send()
