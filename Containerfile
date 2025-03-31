@@ -19,4 +19,4 @@ RUN make install-pdm install-global
 USER chatuser
 EXPOSE 8000
 
-CMD ["chainlit", "run", "app.py"]
+CMD ["chainlit", "run", "app.py", "--host",  "0.0.0.0"]
