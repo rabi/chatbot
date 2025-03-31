@@ -50,7 +50,7 @@ class MongoDBConversationStore(ConversationStore):
             # Validate connection immediately
             self.client.admin.command('ping')
             self.db = self.client[config.default_db_name]
-            self.collection = self.db[config.default_collection_name]
+            self.collection = self.db[config.default_db_collection_name]
             self.available = True
             cl.logger.info("Successfully connected to MongoDB")
         except (ConnectionFailure, PyMongoError) as exception:
