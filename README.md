@@ -8,19 +8,49 @@ RCAccelerator is an interactive AI assistant designed to assist engineering team
 
 ## Running the App
 
-1. (Optional) [Manually install PDM](https://pdm-project.org/en/latest/#installation) or go to step 2 directly.
+* Install dependencies (which also takes care of installing PDM if needed):
 
-2. Install dependencies (which also takes care of installing PDM if needed):
-   ```bash
-   make install-deps
-   ```
+```bash
+make install-deps
+```
 
-3. Configure your environment:
-   - Create a `.env` file or export the necessary environment variables.
+* Create a `.env` file or export the necessary environment variables.
 
-4. Start the Chainlit app:
-   ```bash
-   pdm run chainlit run app.py
-   ```
+* Start the Chainlit app:
 
-   Replace `app.py` with your actual entry point filename.
+```bash
+pdm run chainlit run src/app.py
+```
+
+## Environment Variables
+
+The application can be configured using the following environment variables:
+
+### LLM Settings
+
+* `GENERATION_LLM_API_URL`: URL for the generative LLM API
+* `GENERATION_LLM_API_KEY`: API key for the generative LLM
+* `EMBEDDINGS_LLM_API_URL`: URL for the embeddings LLM API
+* `EMBEDDINGS_LLM_API_API_KEY`: API key for the embeddings LLM
+* `DEFAULT_MODEL_NAME`: Name of the generative model to use (default: 'Mistral-7B-Instruct-v0.2')
+* `DEFAULT_EMBEDDINGS_MODEL`: Name of the embeddings model to use (default: 'bge-large-en-v1.5')
+
+### Model Parameters
+
+* `DEFAULT_MODEL_TEMPERATURE`: Temperature setting for generation (default: 0.7)
+* `DEFAULT_MODEL_MAX_TOKENS`: Maximum tokens for generation (default: 1024)
+* `DEFAULT_MODEL_TOP_P`: Top-p sampling parameter (default: 1)
+* `DEFAULT_MODEL_N`: Number of completions to generate (default: 1)
+
+### Database Settings
+
+* `DB_URL`: MongoDB connection URL
+* `DEFAULT_DB_NAME`: Name of the database (default: 'conversations')
+* `DEFAULT_COLLECTION_NAME`: Name of the collection (default: 'debug-collection')
+
+### Vector Database Settings
+
+* `VECTORDB_URL`: URL for the vector database
+* `VECTORDB_API_KEY`: API key for the vector database
+* `VECTORDB_PORT`: Port for the vector database (default: 6333)
+* `VECTORDB_COLLECTION_NAME`: Collection name in the vector database (default: 'all-jira-tickets')
