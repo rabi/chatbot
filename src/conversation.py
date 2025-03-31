@@ -1,13 +1,39 @@
-"""MongoDB connection and operations for the RCA chatbot."""
+"""Storage implementations for conversation history and feedback."""
 import chainlit as cl
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, PyMongoError
 
-from config import DB_URL, DEFAULT_DB_NAME, DEFAULT_COLLECTION_NAME
+from config import config
 
 
-class MongoDBClient:
-    """MongoDB client for storing conversation history and feedback."""
+class ConversationStore:
+    """Abstract interface for conversation storage operations."""
+
+    def save(self, conversation_data):
+        """
+        Save conversation data to storage.
+
+        Args:
+            conversation_data: Dictionary containing all conversation data
+        """
+        raise NotImplementedError
+
+    def update_feedback(self, message_id, feedback_value):
+        """
+        Update feedback for a specific message.
+
+        Args:
+            message_id: ID of the message to update
+            feedback_value: Feedback value to store
+
+        Returns:
+            bool: True if operation succeeded, False otherwise
+        """
+        raise NotImplementedError
+
+
+class MongoDBConversationStore(ConversationStore):
+    """MongoDB implementation of ConversationStore interface."""
 
     def __init__(self):
         self.client = None
@@ -19,11 +45,12 @@ class MongoDBClient:
     def connect(self):
         """Establish connection to MongoDB."""
         try:
-            self.client = MongoClient(DB_URL, serverSelectionTimeoutMS=5000)
+            self.client = MongoClient(config.db_url,
+                                      serverSelectionTimeoutMS=5000)
             # Validate connection immediately
             self.client.admin.command('ping')
-            self.db = self.client[DEFAULT_DB_NAME]
-            self.collection = self.db[DEFAULT_COLLECTION_NAME]
+            self.db = self.client[config.default_db_name]
+            self.collection = self.db[config.default_collection_name]
             self.available = True
             cl.logger.info("Successfully connected to MongoDB")
         except (ConnectionFailure, PyMongoError) as exception:
@@ -34,7 +61,7 @@ class MongoDBClient:
             self.collection = None
             self.available = False
 
-    def save_conversation(self, conversation_data):
+    def save(self, conversation_data):
         """
         Save conversation data to database.
 
@@ -69,4 +96,4 @@ class MongoDBClient:
 
 
 # Create singleton instance
-mongodb_client = MongoDBClient()
+conversation_store = MongoDBConversationStore()

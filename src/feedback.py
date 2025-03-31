@@ -1,7 +1,7 @@
 """Handler for user feedback on responses."""
 import chainlit as cl
 
-from mongodb import mongodb_client
+from conversation import conversation_store
 
 
 async def handle_feedback(action):
@@ -15,7 +15,7 @@ async def handle_feedback(action):
     message_id = action.forId
     feedback_value = action.payload.get("feedback")
 
-    success = mongodb_client.update_feedback(message_id, feedback_value)
+    success = conversation_store.update_feedback(message_id, feedback_value)
 
     if not success:
         cl.logger.warning("Failed to save feedback for message %s",

@@ -28,8 +28,8 @@ The application can be configured using the following environment variables:
 
 ### LLM Settings
 
-* `LLM_API_URL`: URL for the generative LLM API
-* `OPENAI_API_KEY`: API key for the generative LLM
+* `GENERATION_LLM_API_URL`: URL for the generative LLM API
+* `GENERATION_LLM_API_KEY`: API key for the generative LLM
 * `EMBEDDINGS_LLM_API_URL`: URL for the embeddings LLM API
 * `EMBEDDINGS_LLM_API_API_KEY`: API key for the embeddings LLM
 * `DEFAULT_MODEL_NAME`: Name of the generative model to use (default: 'Mistral-7B-Instruct-v0.2')
@@ -51,5 +51,6 @@ The application can be configured using the following environment variables:
 ### Vector Database Settings
 
 * `VECTORDB_URL`: URL for the vector database
+* `VECTORDB_API_KEY`: API key for the vector database
 * `VECTORDB_PORT`: Port for the vector database (default: 6333)
 * `VECTORDB_COLLECTION_NAME`: Collection name in the vector database (default: 'all-jira-tickets')

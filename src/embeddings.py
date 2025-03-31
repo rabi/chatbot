@@ -3,21 +3,18 @@ import chainlit as cl
 from openai import AsyncOpenAI, OpenAIError
 from qdrant_client.http.exceptions import ApiException
 
-from config import (
-    EMB_LLM_API_URL, EMB_LLM_API_KEY, EMBEDDINGS_MODEL,
-    SEARCH_INSTRUCTION, SEARCH_TOP_N, SEARCH_SIMILARITY_THRESHOLD
-)
-from vectordb import vectordb_client
+from config import config
+from vectordb import vector_store
 
 # Initialize embedding LLM client
 emb_llm = AsyncOpenAI(
-    base_url=EMB_LLM_API_URL,
+    base_url=config.embeddings_llm_api_url,
     organization='',
-    api_key=EMB_LLM_API_KEY
+    api_key=config.embeddings_llm_api_key
 )
 
 
-async def generate_embedding(text, model_name=EMBEDDINGS_MODEL):
+async def generate_embedding(text, model_name=config.embeddings_model):
     """Generate embeddings for the given text using the specified model."""
     try:
         embedding_response = await emb_llm.embeddings.create(
@@ -42,9 +39,9 @@ async def generate_embedding(text, model_name=EMBEDDINGS_MODEL):
 
 
 async def search_similar_content(
-        search_string, model_name=EMBEDDINGS_MODEL,
-        top_n=SEARCH_TOP_N,
-        similarity_threshold=SEARCH_SIMILARITY_THRESHOLD):
+        search_string, model_name=config.embeddings_model,
+        top_n=config.search_top_n,
+        similarity_threshold=config.search_similarity_threshold):
     """
     Search for similar content in the vector database.
 
@@ -63,22 +60,22 @@ async def search_similar_content(
             return []
 
         # Search vector database using the embedding
-        results = vectordb_client.search(embedding, top_n,
-                                         similarity_threshold)
+        results = vector_store.search(embedding, top_n,
+                                      similarity_threshold)
         return results
     except (ApiException, OpenAIError, ValueError, KeyError) as e:
         cl.logger.error("Error in search_similar_content: %s", str(e))
         return []
 
 
-async def db_lookup(search_string, model_name=EMBEDDINGS_MODEL,
-                    search_top_n=SEARCH_TOP_N,
-                    search_sensitive=SEARCH_SIMILARITY_THRESHOLD):
+async def db_lookup(search_string, model_name=config.embeddings_model,
+                    search_top_n=config.search_top_n,
+                    search_sensitive=config.search_similarity_threshold):
     """
     Legacy compatibility wrapper for search_similar_content.
     Search the vector database for relevant content based on the input query.
     """
-    search_query = SEARCH_INSTRUCTION + search_string
+    search_query = config.search_instruction + search_string
     return await search_similar_content(
         search_query, model_name, search_top_n, search_sensitive
     )

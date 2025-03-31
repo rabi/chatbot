@@ -5,10 +5,7 @@ with RAG capabilities.
 import chainlit as cl
 from chainlit.input_widget import Select, Switch, Slider
 
-from config import (
-    GENERATIVE_MODEL, DEFAULT_TEMPERATURE,
-    DEFAULT_MAX_TOKENS
-)
+from config import config
 from chat import handle_user_message
 from feedback import handle_feedback
 
@@ -25,13 +22,13 @@ async def init_chat():
             Select(
                 id="model",
                 label="Chat - Model",
-                values=[GENERATIVE_MODEL],
+                values=[config.generative_model],
                 initial_index=0,
             ),
             Slider(
                 id="temperature",
                 label="Model Temperature",
-                initial=DEFAULT_TEMPERATURE,
+                initial=config.default_temperature,
                 min=0,
                 max=1,
                 step=0.1,
@@ -39,7 +36,7 @@ async def init_chat():
             Slider(
                 id="max_tokens",
                 label="Max Tokens",
-                initial=DEFAULT_MAX_TOKENS,
+                initial=config.default_max_tokens,
                 min=1,
                 max=1024,
                 step=1,

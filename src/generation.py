@@ -2,14 +2,13 @@
 import chainlit as cl
 from openai import AsyncOpenAI, OpenAIError
 
-from config import (GEN_LLM_API_URL, GEN_LLM_API_KEY,
-                    SYSTEM_PROMPT)
+from config import config
 
 # Initialize generative LLM client
 gen_llm = AsyncOpenAI(
-    base_url=GEN_LLM_API_URL,
+    base_url=config.generation_llm_api_url,
     organization='',
-    api_key=GEN_LLM_API_KEY
+    api_key=config.generation_llm_api_key,
 )
 
 
@@ -25,16 +24,16 @@ async def generate_response(user_message, model_settings, stream=True):
     Returns:
         Generated response text or stream
     """
-    message_history = [{"role": "system", "content": SYSTEM_PROMPT}]
+    message_history = [{"role": "system", "content": config.system_prompt}]
     message_history.append({"role": "user", "content": user_message})
 
     try:
         if stream:
             return await gen_llm.chat.completions.create(
-                messages=message_history, stream=True, **model_settings
+                messages=message_history, **model_settings
             )
         response = await gen_llm.chat.completions.create(
-            messages=message_history, stream=False, **model_settings
+            messages=message_history, **model_settings
         )
         return response.choices[0].message.content
     except OpenAIError as e:

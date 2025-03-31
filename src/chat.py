@@ -3,8 +3,8 @@ import chainlit as cl
 
 from generation import process_message_and_get_response
 from embeddings import db_lookup
-from mongodb import mongodb_client
-from config import SEARCH_INSTRUCTION, EMBEDDINGS_MODEL
+from conversation import conversation_store
+from config import config
 
 
 async def perform_search(user_content, response_content):
@@ -22,15 +22,16 @@ async def perform_search(user_content, response_content):
 
     # Search based on user query first
     if user_content:
-        search_query = SEARCH_INSTRUCTION + user_content
-        search_results_query = await db_lookup(search_query, EMBEDDINGS_MODEL)
+        search_query = config.search_instruction + user_content
+        search_results_query = await db_lookup(search_query,
+                                               config.embeddings_model)
         search_results.extend(search_results_query)
 
     # Only search based on response if we have content
     if response_content:
-        search_summ_message = SEARCH_INSTRUCTION + response_content
+        search_summ_message = config.search_instruction + response_content
         search_results_sum = await db_lookup(search_summ_message,
-                                             EMBEDDINGS_MODEL)
+                                             config.embeddings_model)
         search_results.extend(search_results_sum)
 
     # Remove duplicates (based on URL) and sort by score
@@ -53,8 +54,7 @@ async def display_search_results(search_results):
     search_message = ""
     for result in search_results:
         score = result.get('score', 0)
-        if score >= 0.8:
-            search_message += f'🔗 {result["url"]}, Similarity Score: {score}\n'
+        search_message += f'🔗 {result["url"]}, Similarity Score: {score}\n'
     if search_message != "":
         await cl.Message(content="Top similar bugs:\n" + search_message).send()
 
@@ -93,6 +93,6 @@ async def handle_user_message(message: cl.Message):
         "model_settings": model_settings,
         "search_results": search_results
     }
-    mongodb_client.save_conversation(conversation_data)
+    conversation_store.save(conversation_data)
 
     await msg.send()
