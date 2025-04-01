@@ -30,10 +30,10 @@ The application can be configured using the following environment variables:
 
 * `GENERATION_LLM_API_URL`: URL for the generative LLM API
 * `GENERATION_LLM_API_KEY`: API key for the generative LLM
+* `GENERATION_LLM_MODEL_NAME`: Name of the generative model to use (default: 'mistralai/Mistral-7B-Instruct-v0.3')
 * `EMBEDDINGS_LLM_API_URL`: URL for the embeddings LLM API
 * `EMBEDDINGS_LLM_API_API_KEY`: API key for the embeddings LLM
-* `DEFAULT_MODEL_NAME`: Name of the generative model to use (default: 'Mistral-7B-Instruct-v0.2')
-* `DEFAULT_EMBEDDINGS_MODEL`: Name of the embeddings model to use (default: 'bge-large-en-v1.5')
+* `EMBEDDINGS_LLM_MODEL_NAME`: Name of the embeddings model to use (default: 'BAAI/bge-m3')
 
 ### Model Parameters
 
