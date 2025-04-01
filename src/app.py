@@ -7,7 +7,7 @@ from chainlit.input_widget import Select, Switch, Slider
 
 from config import config
 from chat import handle_user_message
-from feedback import handle_feedback
+from auth import authentification
 
 
 @cl.on_chat_start
@@ -17,6 +17,14 @@ async def init_chat():
     elements.
     Sets up model selection, parameters, and initial message history.
     """
+
+    app_user = cl.user_session.get("user")
+    await cl.Message(
+        content=(f"Hello {app_user.identifier}! " +
+                 config.welcome_message)
+    ).send()
+    cl.user_session.set("counter", 0)
+
     settings = await cl.ChatSettings(
         [
             Select(
@@ -47,13 +55,16 @@ async def init_chat():
     cl.user_session.set("model_settings", settings)
 
 
-@cl.action_callback("feedback")
-async def on_action(action):
-    """Handle feedback actions from users."""
-    await handle_feedback(action)
-
-
 @cl.on_message
 async def main(message: cl.Message):
     """Main message handler that processes user input."""
     await handle_user_message(message)
+
+
+@cl.password_auth_callback
+async def auth_callback(username: str, password: str):
+    """
+    Authentication callback to validate user credentials.
+    Returns True if authentication is successful, False otherwise.
+    """
+    return authentification.authenticate(username, password)
