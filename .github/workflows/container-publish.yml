@@ -69,8 +69,8 @@ jobs:
           file: Containerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            main
-            ${{ github.sha }}
+            quay.io/rcaccelerator/chatbot:main
+            quay.io/rcaccelerator/chatbot:${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
