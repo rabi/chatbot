@@ -18,9 +18,9 @@ class Config:
         self.embeddings_llm_api_key = os.environ.get(
             "EMBEDDINGS_LLM_API_KEY")
         self.generative_model = os.environ.get(
-            "DEFAULT_MODEL_NAME", 'Mistral-7B-Instruct-v0.2')
+            "GENERATION_LLM_MODEL_NAME", 'mistralai/Mistral-7B-Instruct-v0.3')
         self.embeddings_model = os.environ.get(
-            "DEFAULT_EMBEDDINGS_MODEL", 'bge-large-en-v1.5')
+            "EMBEDDINGS_LLM_MODEL_NAME", 'BAAI/bge-m3')
         self.default_temperature = float(
             os.environ.get("DEFAULT_MODEL_TEMPERATURE", 0.7))
         self.default_max_tokens = int(
