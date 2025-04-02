@@ -19,8 +19,7 @@ async def perform_search(user_content: str) -> list[dict]:
     """
 
     # Search based on user query first
-    search_query = user_content
-    search_results_query = await search_similar_content(search_query)
+    search_results_query = await search_similar_content(user_content)
     search_results = []
     search_results.extend(search_results_query)
 
