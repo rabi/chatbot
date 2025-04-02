@@ -50,7 +50,7 @@ def build_prompt(search_results: list[dict]) -> str:
         Formatted string with search results
     """
     if not search_results:
-        return config.prompt_header + "No relevant results found."
+        return config.prompt_header + "NO relevant Jira tickets found."
 
     prompt = [
         f"{res.get('text')}, Similarity Score: {res.get('score', 0)}"
