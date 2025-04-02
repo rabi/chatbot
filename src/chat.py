@@ -2,7 +2,7 @@
 import chainlit as cl
 
 from generation import process_message_and_get_response
-from embeddings import db_lookup
+from embeddings import search_similar_content
 from config import config
 
 
@@ -20,8 +20,7 @@ async def perform_search(user_content: str) -> list[dict]:
 
     # Search based on user query first
     search_query = user_content
-    search_results_query = await db_lookup(search_query,
-                                           config.embeddings_model)
+    search_results_query = await search_similar_content(search_query)
     search_results = []
     search_results.extend(search_results_query)
 

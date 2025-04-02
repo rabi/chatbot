@@ -66,16 +66,3 @@ async def search_similar_content(
     except (ApiException, OpenAIError, ValueError, KeyError) as e:
         cl.logger.error("Error in search_similar_content: %s", str(e))
         return []
-
-
-async def db_lookup(search_string, model_name=config.embeddings_model,
-                    search_top_n=config.search_top_n,
-                    search_sensitive=config.search_similarity_threshold):
-    """
-    Legacy compatibility wrapper for search_similar_content.
-    Search the vector database for relevant content based on the input query.
-    """
-    search_query = config.search_instruction + search_string
-    return await search_similar_content(
-        search_query, model_name, search_top_n, search_sensitive
-    )
