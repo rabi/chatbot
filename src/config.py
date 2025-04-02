@@ -27,6 +27,7 @@ class Config:
     search_similarity_threshold: float
     search_top_n: int
     system_prompt: str
+    prompt_header: str
     welcome_message: str
 
     @classmethod
@@ -67,7 +68,16 @@ class Config:
                 "failures and help define RCA."),
             welcome_message=os.environ.get(
                 "WELCOME_MESSAGE",
-                "I am your CI assistant. I will help you with your RCA.")
+                "I am your CI assistant. I will help you with your RCA."),
+            prompt_header=os.environ.get(
+            "CONTEXT_HEADER",
+            "The following text provides information from Jira tickets." +
+            "Use this information to help resolve the issue mentioned above.\n\n" +
+            "Each ticket follows this structure:\n" +
+            "<Ticket summary>\n" +
+            "<Ticket description><Ticket comments>\n\n" +
+            "Tickets:\n"
+        )
         )
 
 

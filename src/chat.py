@@ -40,28 +40,26 @@ async def perform_search(user_content: str) -> list[dict]:
                   key=lambda x: x.get('score', 0), reverse=True)
 
 
-def search_results_for_context(search_results) -> str:
+def build_context(search_results: list[dict]) -> str:
     """
-    Format search results into a readable string.
+    Generate a formatted context string based on the information we retrieved
+    from the vector database.
 
     Args:
-        search_results: List of search results
+        search_results: A list of results obtained from the vector db
 
     Returns:
         Formatted string with search results
     """
     if not search_results:
-        return "No relevant results found."
+        return config.context_header + "No relevant results found."
 
-    filtered = [
+    context = [
         f"{res.get('text')}, Similarity Score: {res.get('score', 0)}"
         for res in search_results
     ]
 
-    if filtered:
-        return "\n".join(filtered)
-
-    return "No highly relevant results found."
+    return config.context_header + "\n" + "\n".join(context)
 
 
 def append_searched_urls(search_results, resp):
@@ -100,9 +98,7 @@ async def handle_user_message(message: cl.Message):
 
     if message.content:
         search_results = await perform_search(message.content)
-    if search_results:
-        message.content += (f"\n\nReply in the following context:"
-                            f"\n{search_results_for_context(search_results)}")
+        message.content += build_context(search_results)
 
     # Process user message and get AI response
     await process_message_and_get_response(message, resp, model_settings)
