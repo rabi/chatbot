@@ -8,8 +8,8 @@ from config import config
 
 async def perform_search(user_content: str) -> list[dict]:
     """
-    Perform search inside of the vector DB to find information that might relate
-    to the problem described by the user.
+    Perform search inside of the vector DB to find information that might
+    relate to the problem described by the user.
 
     Args:
         user_content: User's input query
