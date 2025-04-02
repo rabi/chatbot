@@ -77,8 +77,7 @@ class Config:
                 "Each ticket follows this structure:\n" +
                 "<Ticket summary>\n" +
                 "<Ticket description><Ticket comments>\n\n" +
-                "Here is the text with the information from the tickets:\n"
-        )
+                "Here is the text with the information from the tickets:\n")
         )
 
 
