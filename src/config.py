@@ -70,14 +70,14 @@ class Config:
                 "WELCOME_MESSAGE",
                 "I am your CI assistant. I will help you with your RCA."),
             prompt_header=os.environ.get(
-            "CONTEXT_HEADER",
-            "The following text provides information from Jira tickets. " +
-            "Use this information to help resolve the issue mentioned " +
-            "above.\n\n" +
-            "Each ticket follows this structure:\n" +
-            "<Ticket summary>\n" +
-            "<Ticket description><Ticket comments>\n\n" +
-            "Here is the text with the information from the tickets:\n"
+                "CONTEXT_HEADER",
+                "The following text provides information from Jira tickets. " +
+                "Use this information to help resolve the issue mentioned " +
+                "above.\n\n" +
+                "Each ticket follows this structure:\n" +
+                "<Ticket summary>\n" +
+                "<Ticket description><Ticket comments>\n\n" +
+                "Here is the text with the information from the tickets:\n"
         )
         )
 

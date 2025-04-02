@@ -38,10 +38,10 @@ async def perform_search(user_content: str) -> list[dict]:
                   key=lambda x: x.get('score', 0), reverse=True)
 
 
-def build_context(search_results: list[dict]) -> str:
+def build_prompt(search_results: list[dict]) -> str:
     """
-    Generate a formatted context string based on the information we retrieved
-    from the vector database.
+    Generate a prompt based on the information we retrieved from the vector
+    database.
 
     Args:
         search_results: A list of results obtained from the vector db
@@ -50,14 +50,14 @@ def build_context(search_results: list[dict]) -> str:
         Formatted string with search results
     """
     if not search_results:
-        return config.context_header + "No relevant results found."
+        return config.prompt_header + "No relevant results found."
 
-    context = [
+    prompt = [
         f"{res.get('text')}, Similarity Score: {res.get('score', 0)}"
         for res in search_results
     ]
 
-    return config.context_header + "\n" + "\n".join(context)
+    return config.prompt_header + "\n" + "\n".join(prompt)
 
 
 def append_searched_urls(search_results, resp):
@@ -96,7 +96,7 @@ async def handle_user_message(message: cl.Message):
 
     if message.content:
         search_results = await perform_search(message.content)
-        message.content += build_context(search_results)
+        message.content += build_prompt(search_results)
 
     # Process user message and get AI response
     await process_message_and_get_response(message, resp, model_settings)
