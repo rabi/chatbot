@@ -2,13 +2,14 @@
 import chainlit as cl
 
 from generation import process_message_and_get_response
-from embeddings import db_lookup
+from embeddings import search_similar_content
 from config import config
 
 
-async def perform_search(user_content):
+async def perform_search(user_content: str) -> list[dict]:
     """
-    Perform search with user input.
+    Perform search inside of the vector DB to find information that might
+    relate to the problem described by the user.
 
     Args:
         user_content: User's input query
@@ -16,17 +17,14 @@ async def perform_search(user_content):
     Returns:
         List of unique search results sorted by relevance
     """
-    search_results = []
 
     # Search based on user query first
-    if user_content:
-        search_query = config.search_instruction + user_content
-        search_results_query = await db_lookup(search_query,
-                                               config.embeddings_model)
-        search_results.extend(search_results_query)
+    search_results_query = await search_similar_content(user_content)
+    search_results = []
+    search_results.extend(search_results_query)
 
     # Remove duplicates (based on URL) and sort by score
-    unique_results = {}
+    unique_results: dict = {}
     for result in search_results:
         url = result.get('url')
         if url in unique_results:
@@ -40,28 +38,26 @@ async def perform_search(user_content):
                   key=lambda x: x.get('score', 0), reverse=True)
 
 
-def search_results_for_context(search_results) -> str:
+def build_prompt(search_results: list[dict]) -> str:
     """
-    Format search results into a readable string.
+    Generate a prompt based on the information we retrieved from the vector
+    database.
 
     Args:
-        search_results: List of search results
+        search_results: A list of results obtained from the vector db
 
     Returns:
         Formatted string with search results
     """
     if not search_results:
-        return "No relevant results found."
+        return config.prompt_header + "NO relevant Jira tickets found."
 
-    filtered = [
+    prompt = [
         f"{res.get('text')}, Similarity Score: {res.get('score', 0)}"
         for res in search_results
     ]
 
-    if filtered:
-        return "\n".join(filtered)
-
-    return "No highly relevant results found."
+    return config.prompt_header + "\n" + "\n".join(prompt)
 
 
 def append_searched_urls(search_results, resp):
@@ -98,10 +94,9 @@ async def handle_user_message(message: cl.Message):
 
     resp = cl.Message(content="")
 
-    search_results = await perform_search(message.content)
-    if search_results:
-        message.content += (f"\n\nReply in the following context:"
-                            f"\n{search_results_for_context(search_results)}")
+    if message.content:
+        search_results = await perform_search(message.content)
+        message.content += build_prompt(search_results)
 
     # Process user message and get AI response
     await process_message_and_get_response(message, resp, model_settings)
