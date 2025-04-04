@@ -2,7 +2,7 @@
 import chainlit as cl
 import httpx
 
-from generation import process_message_and_get_response
+from generation import get_response, ModelSettings
 from embeddings import search_similar_content, get_num_tokens
 from config import config, SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
 
@@ -185,8 +185,17 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
 
         message.content += build_prompt(search_results)
 
+    model_settings: ModelSettings = {
+        "model": settings["model"],
+        "max_tokens": settings["max_tokens"],
+        "temperature": settings["temperature"],
+    }
+
     # Process user message and get AI response
-    await process_message_and_get_response(message, resp, settings)
+    await get_response(
+        message, resp, model_settings,
+        stream_response=settings.get("stream", True)
+    )
 
     # Extend response with searched jira urls
     append_searched_urls(search_results, resp)
