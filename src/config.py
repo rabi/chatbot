@@ -48,7 +48,7 @@ class Config:
                 "EMBEDDINGS_LLM_API_KEY", ""),
             embeddings_llm_max_context=int(os.environ.get(
                 "EMBEDDINGS_LLM_MAX_CONTEXT",
-                8194,
+                8192,
             )),
             generative_model=os.environ.get(
                 "GENERATION_LLM_MODEL_NAME",
