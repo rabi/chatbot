@@ -128,7 +128,9 @@ async def check_message_length(message_content: str) -> tuple[bool, str]:
 
     return True, ""
 
-async def print_debug_content(settings: dict, search_results: list[dict]) -> None:
+
+async def print_debug_content(
+        settings: dict, search_results: list[dict]) -> None:
     """Print debug content if user requested it.
 
     Args:
@@ -154,7 +156,6 @@ async def print_debug_content(settings: dict, search_results: list[dict]) -> Non
                 f"- Preview: {result.get('text', 'N/A')[:500]}...\n\n"
             )
     await cl.Message(content=debug_content).send()
-
 
 
 async def handle_user_message(message: cl.Message, debug_mode=False):
