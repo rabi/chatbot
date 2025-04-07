@@ -128,6 +128,34 @@ async def check_message_length(message_content: str) -> tuple[bool, str]:
 
     return True, ""
 
+async def print_debug_content(settings: dict, search_results: list[dict]) -> None:
+    """Print debug content if user requested it.
+
+    Args:
+        settings: The settings user provided through the UI.
+        search_results: The results we obtained from the vector database.
+    """
+    # Initialize debug_content with all settings
+    debug_content = ""
+    if settings:
+        debug_content = "**Current Settings:**\n"
+        for key, value in settings.items():
+            debug_content += f"- {key}: {value}\n"
+    debug_content += "\n"
+
+    # Display vector DB debug information if debug mode is enabled
+    if search_results:
+        debug_content += "**Vector DB Search Results:**\n"
+        for i, result in enumerate(search_results[:10], 1):
+            debug_content += (
+                f"**Result {i}**\n"
+                f"- Score: {result.get('score', 0)}\n"
+                f"- URL: {result.get('url', 'N/A')}\n"
+                f"- Preview: {result.get('text', 'N/A')[:500]}...\n\n"
+            )
+    await cl.Message(content=debug_content).send()
+
+
 
 async def handle_user_message(message: cl.Message, debug_mode=False):
     """
@@ -139,13 +167,6 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     """
     settings = cl.user_session.get("settings")
     resp = cl.Message(content="")
-
-    # Initialize debug_content with all settings
-    debug_content = "**Current Settings:**\n"
-    if settings:
-        for key, value in settings.items():
-            debug_content += f"- {key}: {value}\n"
-    debug_content += "\n"
 
     try:
         if message.elements and message.elements[0].path:
@@ -169,19 +190,8 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
         st = get_similarity_threshold()
         search_results = await perform_search(user_content=message.content,
                                               similarity_threshold=st)
-
-        # Display vector DB debug information if debug mode is enabled
         if debug_mode:
-            if search_results:
-                debug_content += "**Vector DB Search Results:**\n"
-                for i, result in enumerate(search_results[:10], 1):
-                    debug_content += (
-                        f"**Result {i}**\n"
-                        f"- Score: {result.get('score', 0)}\n"
-                        f"- URL: {result.get('url', 'N/A')}\n"
-                        f"- Preview: {result.get('text', 'N/A')[:500]}...\n\n"
-                    )
-            await cl.Message(content=debug_content).send()
+            await print_debug_content(settings, search_results)
 
         message.content += build_prompt(search_results)
 
