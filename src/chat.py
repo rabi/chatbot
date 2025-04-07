@@ -2,7 +2,7 @@
 import chainlit as cl
 import httpx
 
-from generation import process_message_and_get_response
+from generation import get_response, ModelSettings
 from embeddings import search_similar_content, get_num_tokens
 from config import config, SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
 
@@ -129,6 +129,35 @@ async def check_message_length(message_content: str) -> tuple[bool, str]:
     return True, ""
 
 
+async def print_debug_content(
+        settings: dict, search_results: list[dict]) -> None:
+    """Print debug content if user requested it.
+
+    Args:
+        settings: The settings user provided through the UI.
+        search_results: The results we obtained from the vector database.
+    """
+    # Initialize debug_content with all settings
+    debug_content = ""
+    if settings:
+        debug_content = "**Current Settings:**\n"
+        for key, value in settings.items():
+            debug_content += f"- {key}: {value}\n"
+    debug_content += "\n"
+
+    # Display vector DB debug information if debug mode is enabled
+    if search_results:
+        debug_content += "**Vector DB Search Results:**\n"
+        for i, result in enumerate(search_results[:10], 1):
+            debug_content += (
+                f"**Result {i}**\n"
+                f"- Score: {result.get('score', 0)}\n"
+                f"- URL: {result.get('url', 'N/A')}\n"
+                f"- Preview: {result.get('text', 'N/A')[:500]}...\n\n"
+            )
+    await cl.Message(content=debug_content).send()
+
+
 async def handle_user_message(message: cl.Message, debug_mode=False):
     """
     Main handler for user messages.
@@ -138,25 +167,17 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
         debug_mode: Whether to show debug information
     """
     settings = cl.user_session.get("settings")
-    model_settings = {
-        "model": settings["model"],
-        "temperature": settings["temperature"],
-        "max_tokens": settings["max_tokens"],
-        "stream": settings["stream"]
-    }
-
     resp = cl.Message(content="")
 
-    # Initialize debug_content with all settings
-    debug_content = "**Current Settings:**\n"
-    if settings:
-        for key, value in settings.items():
-            debug_content += f"- {key}: {value}\n"
-    debug_content += "\n"
-
-    if message.elements and message.elements[0].path:
-        with open(message.elements[0].path, 'r', encoding='utf-8') as file:
-            message.content += file.read()
+    try:
+        if message.elements and message.elements[0].path:
+            with open(message.elements[0].path, 'r', encoding='utf-8') as file:
+                message.content += file.read()
+    except OSError as e:
+        cl.logger.error(e)
+        resp.content = "An error occurred while processing your file."
+        await resp.send()
+        return
 
     # Check message length
     is_valid_length, error_message = await check_message_length(
@@ -170,24 +191,22 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
         st = get_similarity_threshold()
         search_results = await perform_search(user_content=message.content,
                                               similarity_threshold=st)
-
-        # Display vector DB debug information if debug mode is enabled
         if debug_mode:
-            if search_results:
-                debug_content += "**Vector DB Search Results:**\n"
-                for i, result in enumerate(search_results[:10], 1):
-                    debug_content += (
-                        f"**Result {i}**\n"
-                        f"- Score: {result.get('score', 0)}\n"
-                        f"- URL: {result.get('url', 'N/A')}\n"
-                        f"- Preview: {result.get('text', 'N/A')[:500]}...\n\n"
-                    )
-            await cl.Message(content=debug_content).send()
+            await print_debug_content(settings, search_results)
 
         message.content += build_prompt(search_results)
 
+    model_settings: ModelSettings = {
+        "model": settings["model"],
+        "max_tokens": settings["max_tokens"],
+        "temperature": settings["temperature"],
+    }
+
     # Process user message and get AI response
-    await process_message_and_get_response(message, resp, model_settings)
+    await get_response(
+        message, resp, model_settings,
+        stream_response=settings.get("stream", True)
+    )
 
     # Extend response with searched jira urls
     append_searched_urls(search_results, resp)
