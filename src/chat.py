@@ -59,7 +59,11 @@ def build_prompt(search_results: list[dict]) -> str:
         return config.prompt_header + "NO relevant Jira tickets found."
 
     prompt = [
-        f"{res.get('text')}, Similarity Score: {res.get('score', 0)}"
+        f"---\n"
+        f"kind: {res.get('kind', "NO VALUE")}\n"
+        f"text: {res.get('text', "NO VALUE")}\n"
+        f"score: {res.get('score', "NO VALUE")}\n"
+        f"---\n"
         for res in search_results
     ]
 
