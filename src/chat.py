@@ -22,24 +22,20 @@ async def perform_search(user_content: str,
     """
 
     # Search based on user query first
-    search_results_query = await search_similar_content(
+    search_results = await search_similar_content(
         search_string=user_content,
         similarity_threshold=similarity_threshold
     )
-    search_results = []
-    search_results.extend(search_results_query)
 
-    # Remove duplicates (based on URL) and sort by score
     unique_results: dict = {}
     for result in search_results:
-        url = result.get('url')
-        if url in unique_results:
+        key = (result.get('url'), result.get('kind'))
+        if key in unique_results:
             # Keep the result with higher score
-            if result.get('score', 0) > unique_results[url].get('score', 0):
-                unique_results[url] = result
+            if result.get('score', 0) > unique_results[key].get('score', 0):
+                unique_results[key] = result
         else:
-            unique_results[url] = result
-
+            unique_results[key] = result
     return sorted(list(unique_results.values()),
                   key=lambda x: x.get('score', 0), reverse=True)
 
@@ -79,9 +75,15 @@ def append_searched_urls(search_results, resp):
         resp: The response message object to populate
     """
     search_message = ""
+    deduped_urls: list = []
+
+    # Deduplicate jira urls
     for result in search_results:
-        score = result.get('score', 0)
-        search_message += f'🔗 {result["url"]}, Similarity Score: {score}\n'
+        url = result.get('url')
+        if url not in deduped_urls:
+            score = result.get('score', 0)
+            search_message += f'🔗 {url}, Similarity Score: {score}\n'
+            deduped_urls.append(url)
     if search_message != "":
         resp.content += "\n\nTop similar bugs:\n" + search_message
 
