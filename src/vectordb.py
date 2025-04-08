@@ -48,10 +48,8 @@ class QdrantVectorStore(VectorStore):
                                "database")
             else:
                 cl.logger.error("Vector database client is not healthy")
-                self.client = None
         except ApiException as e:
             cl.logger.error("Failed to connect to Qdrant: %s", str(e))
-            self.client = None
 
     def health_check(self):
         """
@@ -63,12 +61,9 @@ class QdrantVectorStore(VectorStore):
         if self.client is None:
             return False
 
-        try:
-            # Attempt to get collection info to verify connection
-            self.client.get_collection(config.vectordb_collection_name)
-            return True
-        except ApiException:
-            return False
+        # Attempt to get collection info to verify connection
+        self.client.get_collection(config.vectordb_collection_name)
+        return True
 
     def search(self, embedding, top_n, similarity_threshold):
         """
