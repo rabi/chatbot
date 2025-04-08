@@ -70,7 +70,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             quay.io/rcaccelerator/chatbot:main
-            quay.io/rcaccelerator/chatbot:${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
