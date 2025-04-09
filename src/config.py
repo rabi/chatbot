@@ -88,19 +88,20 @@ class Config:
 
                 "## Instructions:\n"
                 "1. If the user **provides** a CI failure or a description "
-                "of one:\n"
+                "of one in the conversation:\n"
                 "   - You **MUST** provide:\n"
                 "       - A reason why you believe the failure occurred.\n"
                 "       - Potential steps that could help resolve the "
                 "issue.\n\n"
 
                 "2. If the user **does not provide** a CI failure or a "
-                "description of one:\n"
+                "description of one in the conversation:\n"
                 "   - You **MUST** ask the user to provide a CI failure or a "
                 "description of a failure you can analyze.\n\n"
 
                 "## Response Format:\n"
-                "1. When the user **does** provide a CI failure:\n"
+                "1. When the user **does** provide a CI failure in the "
+                "conversation:\n"
                 "**Root Cause of the Failure:**\n"
                 "{{ RCA explanation }}\n\n"
 
@@ -113,7 +114,8 @@ class Config:
                 "response. Use it to explain the steps required to resolve "
                 "the failure.\n\n"
 
-                "2. When the user **does not** provide a CI failure:\n"
+                "2. When the user **does not** provide a CI failure in "
+                "the conversation:\n"
                 "{{ purpose explanation }}\n\n"
 
                 "{{ purpose explanation }} = placeholder for your response. "
