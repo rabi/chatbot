@@ -137,7 +137,9 @@ async def check_message_length(message_content: str) -> tuple[bool, str]:
 
 
 async def print_debug_content(
-        settings: dict, search_results: list[dict]) -> None:
+        settings: dict,
+        search_content: str,
+        search_results: list[dict]) -> None:
     """Print debug content if user requested it.
 
     Args:
@@ -151,6 +153,13 @@ async def print_debug_content(
         for key, value in settings.items():
             debug_content += f"- {key}: {value}\n"
     debug_content += "\n"
+
+    # Display the search content
+    debug_content += "**Search Content:**\n"
+    debug_content += f"{search_content}\n\n"
+    # Display the number of tokens in the search content
+    num_t = await get_num_tokens(search_content)
+    debug_content += f"**Number of tokens in search content:** {num_t}\n\n"
 
     # Display vector DB debug information if debug mode is enabled
     if search_results:
@@ -212,7 +221,8 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
         search_results = await perform_search(user_content=search_content,
                                               similarity_threshold=st)
         if debug_mode:
-            await print_debug_content(settings, search_results)
+            await print_debug_content(settings, search_content,
+                                      search_results)
 
         message.content += build_prompt(search_results)
 
