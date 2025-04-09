@@ -2,6 +2,7 @@
 import chainlit as cl
 import httpx
 
+from openai.types.chat import ChatCompletionMessageParam
 from generation import get_response, ModelSettings
 from embeddings import search_similar_content, get_num_tokens
 from config import config, SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
@@ -164,6 +165,16 @@ async def print_debug_content(
     await cl.Message(content=debug_content).send()
 
 
+def _build_search_content_from_history(
+        message_history: list[ChatCompletionMessageParam]) -> str:
+    previous_message_content = ""
+    if message_history:
+        for message in message_history:
+            if message['role'] == 'user':
+                previous_message_content += f"\n{message['content']}"
+    return previous_message_content
+
+
 async def handle_user_message(message: cl.Message, debug_mode=False):
     """
     Main handler for user messages.
@@ -174,6 +185,9 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     """
     settings = cl.user_session.get("settings")
     resp = cl.Message(content="")
+    message_history = cl.user_session.get('message_history')
+    previous_messages = _build_search_content_from_history(message_history)
+    search_content = previous_messages + message.content
 
     try:
         if message.elements and message.elements[0].path:
@@ -187,7 +201,7 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
 
     # Check message length
     is_valid_length, error_message = await check_message_length(
-        message.content)
+        search_content)
     if not is_valid_length:
         resp.content = error_message
         await resp.send()
@@ -195,7 +209,7 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
 
     if message.content:
         st = get_similarity_threshold()
-        search_results = await perform_search(user_content=message.content,
+        search_results = await perform_search(user_content=search_content,
                                               similarity_threshold=st)
         if debug_mode:
             await print_debug_content(settings, search_results)
@@ -210,7 +224,7 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
 
     # Process user message and get AI response
     await get_response(
-        message, resp, model_settings,
+        message_history, message, resp, model_settings,
         stream_response=settings.get("stream", True)
     )
 

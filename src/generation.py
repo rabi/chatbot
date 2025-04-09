@@ -29,7 +29,8 @@ class ModelSettings(TypedDict):
     max_tokens: int
 
 
-async def get_response(user_message: cl.Message, response_msg: cl.Message,
+async def get_response(message_history: list[ChatCompletionMessageParam],
+                       user_message: cl.Message, response_msg: cl.Message,
                        model_settings: ModelSettings,
                        stream_response: bool = True) -> None:
     """Process the user's message and generate a response using the LLM.
@@ -46,10 +47,11 @@ async def get_response(user_message: cl.Message, response_msg: cl.Message,
         stream_response: Indicates whether we want to stream the response or
             get the process in a single chunk.
     """
-    message_history: list[ChatCompletionMessageParam] = [
-        {"role": "system", "content": config.system_prompt},
-        {"role": "user", "content": user_message.content},
-    ]
+    if not message_history:
+        message_history = [
+            {"role": "system", "content": config.system_prompt}]
+
+    message_history.append({"role": "user", "content": user_message.content})
 
     try:
         if stream_response:
@@ -66,6 +68,9 @@ async def get_response(user_message: cl.Message, response_msg: cl.Message,
                 **model_settings
             )
             response_msg.content = response.choices[0].message.content or ""
+        message_history.append({"role": "assistant",
+                                "content": response_msg.content})
+        cl.user_session.set('message_history', message_history)
     except OpenAIError as e:
         cl.logger.error("Error in process_message_and_get_response: %s",
                         str(e))
