@@ -57,6 +57,62 @@ score: {{ score value }}
 - When NO tickets were found related to the user input, then expect: "NO relevant Jira tickets found." string.
 - When Jira tickets **ARE** discovered but the user input does not describe a CI failure, you MUST explain your purpose and ask the user to provide a CI failure description. **Nothing else!**
 - Do not include placeholders defined with {{}} in your response.
+- {{ text value }} may follow Jira Formatting Notation
+
+## Jira Formatting Notation
+
+Following are examples of common formatting syntax used in Jira items
+that may be encountered in {{ text value }}.
+
+### Headings
+
+h1. Biggest heading
+
+h2. Bigger heading
+
+h3. Big heading
+
+h4. Normal heading
+
+h5. Small heading
+
+h6. Smallest heading
+
+### Code
+
+{code:title=Bar.java|borderStyle=solid}
+// Some comments here
+public String getFoo()
+{
+    return foo;
+}
+{code}
+
+or
+
+{code:xml}
+    <test>
+        <another tag="attribute"/>
+    </test>
+{code}
+
+### Links
+
+[http://jira.atlassian.com]
+[Atlassian|http://atlassian.com]
+
+or
+
+[#anchor]
+[^attachment.ext]
+
+### Quotes
+
+{quote}
+    here is quotable
+ content to be quoted
+{quote}
+
 """
 
 WELCOME_MESSAGE = "I am your CI assistant. I will help you with your RCA."
