@@ -5,7 +5,8 @@ with RAG capabilities.
 import chainlit as cl
 from chainlit.input_widget import Select, Switch, Slider
 
-from config import config, SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
+from config import config
+from constants import SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
 from chat import handle_user_message
 from auth import authentification
 
