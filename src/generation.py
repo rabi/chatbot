@@ -29,6 +29,14 @@ class ModelSettings(TypedDict):
     max_tokens: int
 
 
+def _handle_context_size_limit(err: OpenAIError) -> str:
+    if 'reduce the length of the messages or completion' in err.message:
+        cl.user_session.set('message_history', '')
+        return 'Request size with history exceeded limit, ' \
+               'Please start a new thread.'
+    return str(err)
+
+
 async def get_response(message_history: list[ChatCompletionMessageParam],
                        user_message: cl.Message, response_msg: cl.Message,
                        model_settings: ModelSettings,
@@ -72,8 +80,10 @@ async def get_response(message_history: list[ChatCompletionMessageParam],
                                 "content": response_msg.content})
         cl.user_session.set('message_history', message_history)
     except OpenAIError as e:
+        err_msg = _handle_context_size_limit(e)
+
         cl.logger.error("Error in process_message_and_get_response: %s",
-                        str(e))
+                        err_msg)
         response_msg.content = (
-            "I encountered an error while generating a response."
+            f"I encountered an error while generating a response: {err_msg}."
         )
