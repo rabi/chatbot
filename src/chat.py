@@ -5,7 +5,8 @@ import httpx
 from openai.types.chat import ChatCompletionMessageParam
 from generation import get_response, ModelSettings
 from embeddings import search_similar_content, get_num_tokens
-from config import config, SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
+from config import config
+from constants import SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
 
 
 async def perform_search(user_content: str,
