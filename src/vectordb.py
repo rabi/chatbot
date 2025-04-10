@@ -94,6 +94,7 @@ class QdrantVectorStore(VectorStore):
                     results.append({
                         "score": res.score,
                         "url": res.payload['url'],
+                        "kind": res.payload['kind'],
                         "text": res.payload['text']
                     })
             return results
