@@ -2,7 +2,7 @@
 FastAPI endpoints for the RCAccelerator API.
 """
 from typing import Dict, Any
-from fastapi import FastAPI, Body
+from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from chat import handle_user_message_api
 from config import config
@@ -12,6 +12,10 @@ app = FastAPI(title="RCAccelerator API")
 
 
 class ChatRequest(BaseModel):
+    """
+    Represents the parameters for a chat request, including 
+    message content, similarity threshold, temperature, and max token limit.
+    """
     content: str
     similarity_threshold: float = Field(
         config.search_similarity_threshold,
