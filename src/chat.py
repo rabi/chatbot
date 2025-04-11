@@ -271,7 +271,11 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     await resp.send()
 
 
-async def handle_user_message_api(message_content: str) -> str:
+async def handle_user_message_api(
+    message_content: str,
+    similarity_threshold: float,
+    model_settings: ModelSettings
+    ) -> str:
     """
     API handler for user messages without Chainlit context.
 
@@ -286,17 +290,10 @@ async def handle_user_message_api(message_content: str) -> str:
     if not is_valid_length:
         return error_message
 
-    # Get default settings from config
-    model_settings: ModelSettings = {
-        "model": config.generative_model,
-        "max_tokens": config.default_max_tokens,
-        "temperature": config.default_temperature,
-    }
-
     # Perform search and build prompt
     search_results = await perform_search(
         user_content=message_content,
-        similarity_threshold=config.search_similarity_threshold
+        similarity_threshold=similarity_threshold
     )
 
     message = MockMessage(content=message_content + build_prompt(search_results), urls=[])
