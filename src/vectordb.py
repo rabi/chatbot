@@ -1,4 +1,6 @@
 """Vector database client for RAG operations."""
+
+from typing import List
 import chainlit as cl
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import ApiException
@@ -9,7 +11,9 @@ from config import config
 class VectorStore:
     """Abstract interface for vector storage and retrieval operations."""
 
-    def search(self, embedding, top_n, similarity_threshold):
+    def search(
+        self, embedding: List[float], top_n: int, similarity_threshold: float
+    ) -> list:
         """
         Search for similar vectors in the database.
 
@@ -40,12 +44,13 @@ class QdrantVectorStore(VectorStore):
         """Initialize the vector database client."""
         self.client = None
         try:
-            self.client = QdrantClient(config.vectordb_url,
-                                       api_key=config.vectordb_api_key,
-                                       port=config.vectordb_port)
+            self.client = QdrantClient(
+                config.vectordb_url,
+                api_key=config.vectordb_api_key,
+                port=config.vectordb_port,
+            )
             if self.health_check():
-                cl.logger.info("Successfully connected to Qdrant vector " +
-                               "database")
+                cl.logger.info("Successfully connected to Qdrant vector " + "database")
             else:
                 cl.logger.error("Vector database client is not healthy")
         except ApiException as e:
@@ -65,7 +70,9 @@ class QdrantVectorStore(VectorStore):
         self.client.get_collection(config.vectordb_collection_name)
         return True
 
-    def search(self, embedding, top_n, similarity_threshold):
+    def search(
+        self, embedding: List[float], top_n: int, similarity_threshold: float
+    ) -> list:
         """
         Search for similar vectors in the database.
 
@@ -86,17 +93,19 @@ class QdrantVectorStore(VectorStore):
             search_results = self.client.search(
                 collection_name=config.vectordb_collection_name,
                 query_vector=embedding,
-                limit=top_n
+                limit=top_n,
             )
 
             for res in search_results:
                 if res.score >= similarity_threshold:
-                    results.append({
-                        "score": res.score,
-                        "url": res.payload['url'],
-                        "kind": res.payload['kind'],
-                        "text": res.payload['text']
-                    })
+                    results.append(
+                        {
+                            "score": res.score,
+                            "url": res.payload["url"],
+                            "kind": res.payload["kind"],
+                            "text": res.payload["text"],
+                        }
+                    )
             return results
         except ApiException as e:
             cl.logger.error("Error in vector search: %s", str(e))
