@@ -1,4 +1,6 @@
 """Embedding generation and vector search functionality."""
+
+from typing import List
 from urllib.parse import urlparse
 
 import chainlit as cl
@@ -12,27 +14,29 @@ from vectordb import vector_store
 # Initialize embedding LLM client
 emb_llm = AsyncOpenAI(
     base_url=config.embeddings_llm_api_url,
-    organization='',
-    api_key=config.embeddings_llm_api_key
+    organization="",
+    api_key=config.embeddings_llm_api_key,
 )
 
 
-async def generate_embedding(text, model_name=config.embeddings_model):
+async def generate_embedding(
+    text: str, model_name: str = config.embeddings_model
+) -> None | List[float]:
     """Generate embeddings for the given text using the specified model."""
     try:
         embedding_response = await emb_llm.embeddings.create(
-            model=model_name,
-            input=text,
-            encoding_format='float'
+            model=model_name, input=text, encoding_format="float"
         )
 
         if not embedding_response:
-            cl.logger.error("Failed to get embeddings: " +
-                            "No response from model %s", model_name)
+            cl.logger.error(
+                "Failed to get embeddings: " + "No response from model %s", model_name
+            )
             return None
         if not embedding_response.data or len(embedding_response.data) == 0:
-            cl.logger.error("Failed to get embeddings: " +
-                            "Empty response for model %s", model_name)
+            cl.logger.error(
+                "Failed to get embeddings: " + "Empty response for model %s", model_name
+            )
             return None
 
         return embedding_response.data[0].embedding
@@ -42,9 +46,11 @@ async def generate_embedding(text, model_name=config.embeddings_model):
 
 
 async def search_similar_content(
-        search_string, model_name=config.embeddings_model,
-        top_n=config.search_top_n,
-        similarity_threshold=config.search_similarity_threshold):
+    search_string: str,
+    model_name: str = config.embeddings_model,
+    top_n: int = config.search_top_n,
+    similarity_threshold: float = config.search_similarity_threshold,
+) -> List:
     """
     Search for similar content in the vector database.
 
@@ -63,8 +69,7 @@ async def search_similar_content(
             return []
 
         # Search vector database using the embedding
-        results = vector_store.search(embedding, top_n,
-                                      similarity_threshold)
+        results = vector_store.search(embedding, top_n, similarity_threshold)
         return results
     except (ApiException, OpenAIError, ValueError, KeyError) as e:
         cl.logger.error("Error in search_similar_content: %s", str(e))
@@ -72,9 +77,11 @@ async def search_similar_content(
 
 
 async def get_num_tokens(
-        prompt: str, model=config.embeddings_model,
-        llm_url=config.embeddings_llm_api_url,
-        api_key=config.embeddings_llm_api_key) -> int:
+    prompt: str,
+    model: str = config.embeddings_model,
+    llm_url: str = config.embeddings_llm_api_url,
+    api_key: str = config.embeddings_llm_api_key,
+) -> int:
     """Retrieve the number of tokens required to process the prompt.
 
     This function calls the /tokenize API endpoint to get the number of
@@ -91,10 +98,7 @@ async def get_num_tokens(
         HTTPStatusError: If the response from the /tokenize API endpoint is
             not 200 status code.
     """
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
 
     data = {
         "model": model,
