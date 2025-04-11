@@ -6,7 +6,11 @@ from openai.types.chat import ChatCompletionMessageParam
 from generation import get_response, ModelSettings
 from embeddings import search_similar_content, get_num_tokens
 from config import config
-from constants import SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
+from constants import (
+    SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD,
+    SEARCH_RESULTS_TEMPLATE,
+    NO_RESULTS_FOUND
+    )
 
 
 async def perform_search(user_content: str,
@@ -54,14 +58,14 @@ def build_prompt(search_results: list[dict]) -> str:
         Formatted string with search results
     """
     if not search_results:
-        return config.prompt_header + "NO relevant Jira tickets found."
+        return config.prompt_header + NO_RESULTS_FOUND
 
     prompt = [
-        f"---\n"
-        f"kind: {res.get('kind', "NO VALUE")}\n"
-        f"text: {res.get('text', "NO VALUE")}\n"
-        f"score: {res.get('score', "NO VALUE")}\n"
-        f"---\n"
+        SEARCH_RESULTS_TEMPLATE.format(
+            kind=res.get('kind', "NO VALUE"),
+            text=res.get('text', "NO VALUE"),
+            score=res.get('score', "NO VALUE"),
+        )
         for res in search_results
     ]
 

@@ -120,3 +120,12 @@ WELCOME_MESSAGE = "I am your CI assistant. I will help you with your RCA."
 CONTEXT_HEADER = "Here is the text with the information from the Jira tickets:\n"  # noqa: E501
 
 SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD = 0.3
+
+SEARCH_RESULTS_TEMPLATE = """---
+kind: {kind}
+text: {text}
+score: {score}
+---
+"""
+
+NO_RESULTS_FOUND = "NO relevant Jira tickets found."
