@@ -13,7 +13,7 @@ app = FastAPI(title="RCAccelerator API")
 
 class ChatRequest(BaseModel):
     """
-    Represents the parameters for a chat request, including 
+    Represents the parameters for a chat request, including
     message content, similarity threshold, temperature, and max token limit.
     """
     content: str
