@@ -91,7 +91,7 @@ def append_searched_urls(search_results, resp, urls_as_list=False):
     Args:
         search_results: List of search results
         resp: The response message object to populate
-        urls_as_list: Whether to return URLs as a list in `resp.urls` 
+        urls_as_list: Whether to return URLs as a list in `resp.urls`
         or as a string in `resp.content`.
     """
     search_message = ""
