@@ -60,16 +60,21 @@ def build_prompt(search_results: list[dict]) -> str:
     if not search_results:
         return config.prompt_header + NO_RESULTS_FOUND
 
-    prompt = [
-        SEARCH_RESULTS_TEMPLATE.format(
+    formatted_results = []
+
+    for res in search_results:
+        components = "NO VALUE"
+        if res.get('components', []):
+            components = ",".join([str(e) for e in res.get('components')])
+
+        formatted_results.append(SEARCH_RESULTS_TEMPLATE.format(
             kind=res.get('kind', "NO VALUE"),
             text=res.get('text', "NO VALUE"),
             score=res.get('score', "NO VALUE"),
-        )
-        for res in search_results
-    ]
+            components=components
+        ))
 
-    return config.prompt_header + "\n" + "\n".join(prompt)
+    return config.prompt_header + "\n" + "\n".join(formatted_results)
 
 
 def append_searched_urls(search_results, resp):
