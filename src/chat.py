@@ -19,8 +19,10 @@ class MockMessage:
 
     Attributes:
         content: The content of the message.
+        urls: The list of Jira urls
     """
     content: str
+    urls: list
 
 
 async def perform_search(user_content: str,
@@ -82,13 +84,15 @@ def build_prompt(search_results: list[dict]) -> str:
     return config.prompt_header + "\n" + "\n".join(prompt)
 
 
-def append_searched_urls(search_results, resp):
+def append_searched_urls(search_results, resp, urls_as_list=False):
     """
     Append search urls.
 
     Args:
         search_results: List of search results
         resp: The response message object to populate
+        urls_as_list: Whether to return URLs as a list in `resp.urls` 
+        or as a string in `resp.content`.
     """
     search_message = ""
     deduped_urls: list = []
@@ -100,7 +104,10 @@ def append_searched_urls(search_results, resp):
             score = result.get('score', 0)
             search_message += f'🔗 {url}, Similarity Score: {score}\n'
             deduped_urls.append(url)
-    if search_message != "":
+    if urls_as_list and deduped_urls:
+        if hasattr(resp, 'urls'):
+            resp.urls = deduped_urls
+    elif search_message:
         resp.content += "\n\nTop similar bugs:\n" + search_message
 
 
@@ -292,8 +299,8 @@ async def handle_user_message_api(message_content: str) -> str:
         similarity_threshold=config.search_similarity_threshold
     )
 
-    message = MockMessage(content=message_content + build_prompt(search_results))
-    response = MockMessage(content="")
+    message = MockMessage(content=message_content + build_prompt(search_results), urls=[])
+    response = MockMessage(content="", urls=[])
 
      # Process user message and get AI response
     is_error = await get_response(
@@ -303,9 +310,9 @@ async def handle_user_message_api(message_content: str) -> str:
 
     if not is_error:
         # Extend response with searched jira urls
-        append_searched_urls(search_results, response)
+        append_searched_urls(search_results, response, urls_as_list=True)
 
-    return response.content
+    return response
 
 
 def get_similarity_threshold() -> float:

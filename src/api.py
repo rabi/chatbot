@@ -1,15 +1,15 @@
 """
 FastAPI endpoints for the RCAccelerator API.
 """
+from typing import Dict, Any
 from fastapi import FastAPI, Body
-
 from chat import handle_user_message_api
 
 app = FastAPI(title="RCAccelerator API")
 
 
 @app.post("/prompt")
-async def process_prompt(message_data: dict = Body(...)) -> dict[str, str]:
+async def process_prompt(message_data: dict = Body(...)) -> Dict[str, Any]:
     """
     FastAPI endpoint that processes a message and returns an answer.
 
@@ -22,4 +22,7 @@ async def process_prompt(message_data: dict = Body(...)) -> dict[str, str]:
     message = message_data.get("content")
     response = await handle_user_message_api(message)
 
-    return {"response": response if response else ""}
+    return  {
+        "response": getattr(response, "content", ""),
+        "urls": getattr(response, "urls", [])
+    }
