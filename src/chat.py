@@ -223,13 +223,14 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     }
 
     # Process user message and get AI response
-    await get_response(
+    is_error = await get_response(
         message_history, message, resp, model_settings,
         stream_response=settings.get("stream", True)
     )
 
-    # Extend response with searched jira urls
-    append_searched_urls(search_results, resp)
+    if not is_error:
+        # Extend response with searched jira urls
+        append_searched_urls(search_results, resp)
 
     update_msg_count()
     await resp.send()

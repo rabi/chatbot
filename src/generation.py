@@ -40,7 +40,7 @@ def _handle_context_size_limit(err: OpenAIError) -> str:
 async def get_response(message_history: list[ChatCompletionMessageParam],
                        user_message: cl.Message, response_msg: cl.Message,
                        model_settings: ModelSettings,
-                       stream_response: bool = True) -> None:
+                       stream_response: bool = True) -> bool:
     """Process the user's message and generate a response using the LLM.
 
     This function constructs the prompt from the LLM by compbining the system
@@ -55,12 +55,12 @@ async def get_response(message_history: list[ChatCompletionMessageParam],
         stream_response: Indicates whether we want to stream the response or
             get the process in a single chunk.
     """
+    is_error = True
     if not message_history:
         message_history = [
             {"role": "system", "content": config.system_prompt}]
 
     message_history.append({"role": "user", "content": user_message.content})
-
     try:
         if stream_response:
             async for stream_resp in await gen_llm.chat.completions.create(
@@ -79,6 +79,7 @@ async def get_response(message_history: list[ChatCompletionMessageParam],
         message_history.append({"role": "assistant",
                                 "content": response_msg.content})
         cl.user_session.set('message_history', message_history)
+        is_error = False
     except OpenAIError as e:
         err_msg = _handle_context_size_limit(e)
 
@@ -87,3 +88,4 @@ async def get_response(message_history: list[ChatCompletionMessageParam],
         response_msg.content = (
             f"I encountered an error while generating a response: {err_msg}."
         )
+    return is_error
