@@ -272,9 +272,9 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
             stream_response=settings.get("stream", True)
         )
 
-    if not is_error:
-        # Extend response with searched jira urls
-        append_searched_urls(search_results, resp)
+        if not is_error:
+            # Extend response with searched jira urls
+            append_searched_urls(search_results, resp)
 
     update_msg_count()
     await resp.send()
