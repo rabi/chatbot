@@ -30,7 +30,8 @@ class MockMessage:
 
 
 async def perform_search(user_content: str,
-                         similarity_threshold: float) -> list[dict]:
+                         similarity_threshold: float,
+                         collection_name: str = config.vectordb_collection_name) -> list[dict]:
     """
     Perform search inside of the vector DB to find information that might
     relate to the problem described by the user.
@@ -46,7 +47,8 @@ async def perform_search(user_content: str,
     # Search based on user query first
     search_results = await search_similar_content(
         search_string=user_content,
-        similarity_threshold=similarity_threshold
+        similarity_threshold=similarity_threshold,
+        collection_name=collection_name
     )
 
     unique_results: dict = {}
@@ -249,8 +251,10 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
 
     if message.content:
         st = get_similarity_threshold()
+        collection_name = get_collection_name()
         search_results = await perform_search(user_content=search_content,
-                                              similarity_threshold=st)
+                                              similarity_threshold=st,
+                                              collection_name=collection_name)
         if debug_mode:
             await print_debug_content(settings, search_content,
                                       search_results)
@@ -345,3 +349,10 @@ def get_similarity_threshold() -> float:
 
     # If threshold is above 1, cap it at 1
     return min(threshold, 1.0)
+
+def get_collection_name() -> str:
+    """Get name of database collection for retrieval."""
+
+    settings = cl.user_session.get("settings")
+
+    return settings.get("collection_name", config.vectordb_collection_name)

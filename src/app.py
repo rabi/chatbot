@@ -3,7 +3,7 @@ Chainlit-based chatbot for Root Cause Analysis assistance
 with RAG capabilities.
 """
 import chainlit as cl
-from chainlit.input_widget import Select, Switch, Slider
+from chainlit.input_widget import Select, Switch, Slider, TextInput
 
 from config import config
 from constants import SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
@@ -69,6 +69,11 @@ async def setup_chat_settings():
                 ),
                 max=1,
                 step=0.05,
+            ),
+            TextInput(
+                id="collection_name",
+                label="Vector DB collection name",
+                initial=config.vectordb_collection_name
             ),
             Switch(id="stream", label="Stream a response", initial=True),
             Switch(id="debug_mode", label="Debug Mode", initial=False),
