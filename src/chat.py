@@ -204,7 +204,7 @@ async def print_debug_content(
                 f"- URL: {result.get('url', 'N/A')}\n"
                 f"- Preview: {result.get('text', 'N/A')[:500]}...\n\n"
             )
-    await cl.Message(content=debug_content).send()
+    await cl.Message(content=debug_content, author="debug").send()
 
 
 def _build_search_content_from_history(
@@ -217,6 +217,18 @@ def _build_search_content_from_history(
     return previous_message_content
 
 
+def _filter_debug_messages(
+        message_history: list[ChatCompletionMessageParam]) -> list[ChatCompletionMessageParam]:
+    """Remove all debug messages from history.
+    """
+    if message_history:
+        message_history = [
+            message for message in message_history
+            if message.get("name", "system") != "debug"]
+
+    return message_history
+
+
 async def handle_user_message(message: cl.Message, debug_mode=False):
     """
     Main handler for user messages.
@@ -227,7 +239,10 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     """
     settings = cl.user_session.get("settings")
     resp = cl.Message(content="")
+
     message_history = cl.user_session.get('message_history')
+    message_history = _filter_debug_messages(message_history)
+
     previous_messages = _build_search_content_from_history(message_history)
     search_content = previous_messages + message.content
 
