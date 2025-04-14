@@ -8,7 +8,11 @@ from generation import get_response
 from embeddings import search_similar_content, get_num_tokens
 from settings import ModelSettings
 from config import config
-from constants import SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
+from constants import (
+    SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD,
+    SEARCH_RESULTS_TEMPLATE,
+    NO_RESULTS_FOUND
+    )
 
 
 # Create mock message and response objects
@@ -19,8 +23,10 @@ class MockMessage:
 
     Attributes:
         content: The content of the message.
+        urls: The list of Jira urls
     """
     content: str
+    urls: list
 
 
 async def perform_search(user_content: str,
@@ -68,27 +74,34 @@ def build_prompt(search_results: list[dict]) -> str:
         Formatted string with search results
     """
     if not search_results:
-        return config.prompt_header + "NO relevant Jira tickets found."
+        return config.prompt_header + NO_RESULTS_FOUND
 
-    prompt = [
-        f"---\n"
-        f"kind: {res.get('kind', "NO VALUE")}\n"
-        f"text: {res.get('text', "NO VALUE")}\n"
-        f"score: {res.get('score', "NO VALUE")}\n"
-        f"---\n"
-        for res in search_results
-    ]
+    formatted_results = []
 
-    return config.prompt_header + "\n" + "\n".join(prompt)
+    for res in search_results:
+        components = "NO VALUE"
+        if res.get('components', []):
+            components = ",".join([str(e) for e in res.get('components')])
+
+        formatted_results.append(SEARCH_RESULTS_TEMPLATE.format(
+            kind=res.get('kind', "NO VALUE"),
+            text=res.get('text', "NO VALUE"),
+            score=res.get('score', "NO VALUE"),
+            components=components
+        ))
+
+    return config.prompt_header + "\n" + "\n".join(formatted_results)
 
 
-def append_searched_urls(search_results, resp):
+def append_searched_urls(search_results, resp, urls_as_list=False):
     """
     Append search urls.
 
     Args:
         search_results: List of search results
         resp: The response message object to populate
+        urls_as_list: Whether to return URLs as a list in `resp.urls`
+        or as a string in `resp.content`.
     """
     search_message = ""
     deduped_urls: list = []
@@ -100,7 +113,10 @@ def append_searched_urls(search_results, resp):
             score = result.get('score', 0)
             search_message += f'🔗 {url}, Similarity Score: {score}\n'
             deduped_urls.append(url)
-    if search_message != "":
+    if urls_as_list and deduped_urls:
+        if hasattr(resp, 'urls'):
+            resp.urls = deduped_urls
+    elif search_message:
         resp.content += "\n\nTop similar bugs:\n" + search_message
 
 
@@ -256,15 +272,19 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
             stream_response=settings.get("stream", True)
         )
 
-    if not is_error:
-        # Extend response with searched jira urls
-        append_searched_urls(search_results, resp)
+        if not is_error:
+            # Extend response with searched jira urls
+            append_searched_urls(search_results, resp)
 
     update_msg_count()
     await resp.send()
 
 
-async def handle_user_message_api(message_content: str) -> str:
+async def handle_user_message_api(
+    message_content: str,
+    similarity_threshold: float,
+    model_settings: ModelSettings
+    ) -> str:
     """
     API handler for user messages without Chainlit context.
 
@@ -279,21 +299,14 @@ async def handle_user_message_api(message_content: str) -> str:
     if not is_valid_length:
         return error_message
 
-    # Get default settings from config
-    model_settings: ModelSettings = {
-        "model": config.generative_model,
-        "max_tokens": config.default_max_tokens,
-        "temperature": config.default_temperature,
-    }
-
     # Perform search and build prompt
     search_results = await perform_search(
         user_content=message_content,
-        similarity_threshold=config.search_similarity_threshold
+        similarity_threshold=similarity_threshold
     )
 
-    message = MockMessage(content=message_content + build_prompt(search_results))
-    response = MockMessage(content="")
+    message = MockMessage(content=message_content + build_prompt(search_results), urls=[])
+    response = MockMessage(content="", urls=[])
 
      # Process user message and get AI response
     is_error = await get_response(
@@ -303,9 +316,9 @@ async def handle_user_message_api(message_content: str) -> str:
 
     if not is_error:
         # Extend response with searched jira urls
-        append_searched_urls(search_results, response)
+        append_searched_urls(search_results, response, urls_as_list=True)
 
-    return response.content
+    return response
 
 
 def get_similarity_threshold() -> float:
