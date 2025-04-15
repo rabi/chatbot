@@ -27,12 +27,12 @@ class VectorStore:
         """
         raise NotImplementedError
 
-    def health_check(self):
+    def get_collection_settings(self) -> tuple[list[str], int]:
         """
-        Check if the vector database connection is healthy.
+        Fetches collection names and determines the initial index.
 
         Returns:
-            bool: True if connection is healthy, False otherwise
+            Tuple of collection names and the initial collection index
         """
         raise NotImplementedError
 
@@ -42,33 +42,38 @@ class QdrantVectorStore(VectorStore):
 
     def __init__(self):
         """Initialize the vector database client."""
-        self.client = None
+        self.client = QdrantClient(
+            config.vectordb_url,
+            api_key=config.vectordb_api_key,
+            port=config.vectordb_port,
+        )
+        cl.logger.info("Qdrant client initialized successfully.")
+
+    def get_collection_settings(self) -> tuple[list[str], int]:
+        """Fetches collection names and determines the initial index."""
+        collection_names = self._get_collections()
+        initial_collection_index = 0
+        if config.vectordb_collection_name in collection_names:
+            initial_collection_index = collection_names.index(config.vectordb_collection_name)
+        else:
+            # Handle case where default collection might not exist (e.g., first run)
+            # It's already added as the first element, so index 0 is correct.
+            cl.logger.warning("Default collection %s not found in Qdrant. " +
+                              "Using it as default anyway.", config.vectordb_collection_name)
+        return collection_names, initial_collection_index
+
+    def _get_collections(self) -> list[str]:
+        """Fetches the list of collection names from Qdrant."""
+        collections = [config.vectordb_collection_name]  # Start with the default
         try:
-            self.client = QdrantClient(
-                config.vectordb_url,
-                api_key=config.vectordb_api_key,
-                port=config.vectordb_port,
-            )
-            if self.health_check():
-                cl.logger.info("Successfully connected to Qdrant vector " + "database")
-            else:
-                cl.logger.error("Vector database client is not healthy")
+            qdrant_collections = self.client.get_collections().collections
+            # Add fetched collections, avoiding duplicates
+            for col in qdrant_collections:
+                if col.name not in collections:
+                    collections.append(col.name)
         except ApiException as e:
-            cl.logger.error("Failed to connect to Qdrant: %s", str(e))
-
-    def health_check(self):
-        """
-        Check if the vector database connection is healthy.
-
-        Returns:
-            bool: True if connection is healthy, False otherwise
-        """
-        if self.client is None:
-            return False
-
-        # Attempt to get collection info to verify connection
-        self.client.get_collection(config.vectordb_collection_name)
-        return True
+            cl.logger.error("Failed to connect to Qdrant to list collections: %s", str(e))
+        return collections
 
     def search(
         self, embedding: List[float], top_n: int, similarity_threshold: float,

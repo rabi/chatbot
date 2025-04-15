@@ -3,6 +3,7 @@
 ## Explore the UI app
 
 ### Chatbot page layout
+
 ![Chatbot Page Layout](./images/chatbot_page.png)
 
 One may start a new thread or navigate to old threads. At any stage user can attaches files to the conversation (e.g. log files relevat to user inquiry).
@@ -16,6 +17,7 @@ Settings panel allows adjusment of paranmeters related to the conversation.
 - **Model Temperature** – Variability and randomness of generated responses (close to 0 means more deterministic and focused outputs, close to 1 means more diversity by sampling from a broader range of possible answers).
 - **Max Tokens** – Influences the maximum length of the response. Increasing this parameter allows the model to produce longer responses.
 - **Search Similarity Threshold** – Currently uses [cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity) (cosine of the angle between two non-zero vectors in an inner product space). A threshold that is too low may yield irrelevant documents, while a threshold that is too high may exclude relevant ones.
+- **VectorDB collection name** – The name of the collection in the vector database. This is where the model will search for relevant documents to answer your question.
 - **Stream a Response** – Streaming a response versus waiting and printing the entire response at once.
 - **Debug Mode** – Provides lots of useful information, allowing developers and users to assess the quality of the response.
 
