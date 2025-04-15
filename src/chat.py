@@ -287,7 +287,8 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
 async def handle_user_message_api(
     message_content: str,
     similarity_threshold: float,
-    model_settings: ModelSettings
+    model_settings: ModelSettings,
+    vectordb_collection: str
     ) -> str:
     """
     API handler for user messages without Chainlit context.
@@ -306,7 +307,8 @@ async def handle_user_message_api(
     # Perform search and build prompt
     search_results = await perform_search(
         user_content=message_content,
-        similarity_threshold=similarity_threshold
+        similarity_threshold=similarity_threshold,
+        collection_name=vectordb_collection
     )
 
     message = MockMessage(content=message_content + build_prompt(search_results), urls=[])

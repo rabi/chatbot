@@ -32,6 +32,10 @@ class ChatRequest(BaseModel):
         gt=1,
         le=1024
     )
+    vectordb_collection: str = Field(
+        config.vectordb_collection_name,
+        description="The name of the vector database collection to use."
+    )
 
 
 @app.post("/prompt")
@@ -54,7 +58,8 @@ async def process_prompt(message_data: ChatRequest) -> Dict[str, Any]:
     response = await handle_user_message_api(
         message_data.content,
         message_data.similarity_threshold,
-        model_settings
+        model_settings,
+        message_data.vectordb_collection,
         )
 
     return  {

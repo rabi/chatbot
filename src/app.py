@@ -3,12 +3,13 @@ Chainlit-based chatbot for Root Cause Analysis assistance
 with RAG capabilities.
 """
 import chainlit as cl
-from chainlit.input_widget import Select, Switch, Slider, TextInput
+from chainlit.input_widget import Select, Switch, Slider
 
 from config import config
 from constants import SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD
 from chat import handle_user_message
 from auth import authentification
+from vectordb import vector_store
 
 
 @cl.on_chat_start
@@ -35,6 +36,7 @@ async def setup_chat_settings():
     Set up the chat settings interface with model selection,
     temperature, token limits, and other configuration options.
     """
+    collection_names, initial_collection_index = vector_store.get_collection_settings()
     settings = await cl.ChatSettings(
         [
             Select(
@@ -70,10 +72,11 @@ async def setup_chat_settings():
                 max=1,
                 step=0.05,
             ),
-            TextInput(
+            Select(
                 id="collection_name",
-                label="Vector DB collection name",
-                initial=config.vectordb_collection_name
+                label="Vector DB Collection",
+                values=collection_names,
+                initial_index=initial_collection_index,
             ),
             Switch(id="stream", label="Stream a response", initial=True),
             Switch(id="debug_mode", label="Debug Mode", initial=False),
