@@ -50,6 +50,7 @@ async def search_similar_content(
     model_name: str = config.embeddings_model,
     top_n: int = config.search_top_n,
     similarity_threshold: float = config.search_similarity_threshold,
+    collection_name: str = config.vectordb_collection_name,
 ) -> List:
     """
     Search for similar content in the vector database.
@@ -69,7 +70,7 @@ async def search_similar_content(
             return []
 
         # Search vector database using the embedding
-        results = vector_store.search(embedding, top_n, similarity_threshold)
+        results = vector_store.search(embedding, top_n, similarity_threshold, collection_name)
         return results
     except (ApiException, OpenAIError, ValueError, KeyError) as e:
         cl.logger.error("Error in search_similar_content: %s", str(e))
