@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:6b66568521240b0f3479e6467098542f10c595cddd1bb258543f78441c6857f3"
+content_hash = "sha256:936b65aef1375dd14602a44085091f22ae94713c732508ed72db73b6e9bf3d4a"
 
 [[metadata.targets]]
 requires_python = "==3.12.*"
@@ -278,7 +278,7 @@ files = [
 
 [[package]]
 name = "chainlit"
-version = "2.4.302"
+version = "2.5.5"
 requires_python = "<4.0.0,>=3.10"
 summary = "Build Conversational AI."
 groups = ["default"]
@@ -308,8 +308,8 @@ dependencies = [
     "watchfiles<0.21.0,>=0.20.0",
 ]
 files = [
-    {file = "chainlit-2.4.302-py3-none-any.whl", hash = "sha256:ee36722a2f84a624637df49efc52e806d77bb0d0f55cb41d8aff179abf097edb"},
-    {file = "chainlit-2.4.302.tar.gz", hash = "sha256:b7e250e7ae10d70ad27e8889d188762b978dfcc19a1c1c05a34f8b99d8f060f3"},
+    {file = "chainlit-2.5.5-py3-none-any.whl", hash = "sha256:1783c7b868fe41158283b498020fa18a23c39d07319ad9927e429f1e888f6eb5"},
+    {file = "chainlit-2.5.5.tar.gz", hash = "sha256:d6388f93b9089e3a80bc2bd286a157a4a9d8016dc2c806372fd77119bcc0d36c"},
 ]
 
 [[package]]
