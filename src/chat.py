@@ -239,7 +239,7 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     try:
         if message.elements and message.elements[0].path:
             with open(message.elements[0].path, 'r', encoding='utf-8') as file:
-                message.content += file.read()
+                search_content += file.read()
     except OSError as e:
         cl.logger.error(e)
         resp.content = "An error occurred while processing your file."
