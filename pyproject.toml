@@ -5,7 +5,7 @@ description = "Useful chatbot that can be used to do RCA of CI errors."
 authors = []
 dependencies = [
     "openai==1.68.2",
-    "chainlit==2.4.302",
+    "chainlit>=2.5.5",
     "qdrant-client==1.13.3",
     "asyncpg>=0.30.0",
     "bcrypt==4.3.0",
