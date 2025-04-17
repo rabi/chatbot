@@ -187,27 +187,35 @@ async def print_debug_content(
     # Initialize debug_content with all settings
     debug_content = ""
     if settings:
-        debug_content = "**Current Settings:**\n"
+        debug_content = "#### Current Settings:\n"
         for key, value in settings.items():
             debug_content += f"- {key}: {value}\n"
-    debug_content += "\n"
+    debug_content += "\n\n"
 
     # Display the search content
-    debug_content += "**Search Content:**\n"
-    debug_content += f"{search_content}\n\n"
+    debug_content += (
+        f"#### Search Content:\n"
+        f"```\n"
+        f"{search_content}\n"
+        f"```\n"
+    )
+
     # Display the number of tokens in the search content
     num_t = await get_num_tokens(search_content)
     debug_content += f"**Number of tokens in search content:** {num_t}\n\n"
 
     # Display vector DB debug information if debug mode is enabled
     if search_results:
-        debug_content += "**Vector DB Search Results:**\n"
-        for i, result in enumerate(search_results[:10], 1):
+        debug_content += "#### Vector DB Search Results:\n"
+        for i, result in enumerate(search_results[:config.search_top_n], 1):
             debug_content += (
                 f"**Result {i}**\n"
                 f"- Score: {result.get('score', 0)}\n"
-                f"- URL: {result.get('url', 'N/A')}\n"
-                f"- Preview: {result.get('text', 'N/A')[:500]}...\n\n"
+                f"- URL: {result.get('url', 'N/A')}\n\n"
+                f"Preview:\n"
+                f"```\n"
+                f"{result.get('text', 'N/A')[:500]} ...\n"
+                f"```\n\n"
             )
     await cl.Message(content=debug_content).send()
 
