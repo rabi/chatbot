@@ -39,9 +39,10 @@ def _handle_context_size_limit(err: OpenAIError) -> str:
     return str(err)
 
 
-async def get_response(history_settings: HistorySettings,
+async def get_response(history_settings: HistorySettings, # pylint: disable=too-many-arguments
                        user_message: cl.Message, response_msg: cl.Message,
                        model_settings: ModelSettings,
+                       product_name: str,
                        stream_response: bool = True) -> bool:
     """Process the user's message and generate a response using the LLM.
 
@@ -59,9 +60,12 @@ async def get_response(history_settings: HistorySettings,
     """
     is_error = True
     message_history = history_settings.get('message_history', [])
+    system_prompt_with_product_name = config.system_prompt.replace(
+        "PRODUCT_NAME", product_name
+    )
     if not message_history:
         message_history = [
-            {"role": "system", "content": config.system_prompt}]
+            {"role": "system", "content": system_prompt_with_product_name}]
 
     message_history.append({"role": "user", "content": user_message.content})
     try:

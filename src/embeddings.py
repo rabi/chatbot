@@ -54,9 +54,9 @@ async def generate_embedding(
 async def search_similar_content(
     search_string: str,
     model_name: str,
+    collection_name: str,
     top_n: int = config.search_top_n,
     similarity_threshold: float = config.search_similarity_threshold,
-    collection_name: str = config.vectordb_collection_name,
 ) -> List:
     """
     Search for similar content in the vector database.

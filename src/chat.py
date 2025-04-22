@@ -2,10 +2,11 @@
 from dataclasses import dataclass
 import chainlit as cl
 import httpx
-
 from openai.types.chat import ChatCompletionMessageParam
+
+from vectordb import vector_store
 from generation import get_response
-from embeddings import search_similar_content, get_num_tokens
+from embeddings import search_similar_content, get_num_tokens, generate_embedding
 from settings import ModelSettings
 from config import config
 from constants import (
@@ -32,7 +33,7 @@ class MockMessage:
 async def perform_search(user_content: str,
                          model_name: str,
                          similarity_threshold: float,
-                         collection_name: str = config.vectordb_collection_name) -> list[dict]:
+                         collection_name: str) -> list[dict]:
     """
     Perform search inside of the vector DB to find information that might
     relate to the problem described by the user.
@@ -64,6 +65,39 @@ async def perform_search(user_content: str,
             unique_results[key] = result
     return sorted(list(unique_results.values()),
                   key=lambda x: x.get('score', 0), reverse=True)
+
+
+async def perform_multi_collection_search(
+    message_content: str,
+    embeddings_model_name: str,
+    similarity_threshold: float,
+    collections: list[str],
+    top_n: int = config.search_top_n
+) -> list[dict]:
+    """
+    Search multiple collections using a generated embedding from message_content.
+    Returns aggregated and sorted results from all collections.
+    """
+    embedding = await generate_embedding(message_content, embeddings_model_name)
+    if embedding is None:
+        return []
+    all_results = []
+    for collection in collections:
+        results = vector_store.search(
+            embedding, top_n, similarity_threshold, collection
+        )
+        for r in results:
+            r['collection'] = collection
+        all_results.extend(results)
+    unique_results = {}
+    for result in all_results:
+        key = (result.get('url'), result.get('kind'))
+        if key in unique_results:
+            if result.get('score', 0) > unique_results[key].get('score', 0):
+                unique_results[key] = result
+        else:
+            unique_results[key] = result
+    return sorted(list(unique_results.values()), key=lambda x: x.get('score', 0), reverse=True)
 
 
 def build_prompt(search_results: list[dict]) -> str:
@@ -256,8 +290,7 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     message_history = cl.user_session.get('message_history')
     message_history = _filter_debug_messages(message_history)
 
-    previous_messages = _build_search_content_from_history(message_history)
-    search_content = previous_messages + message.content
+    search_content = _build_search_content_from_history(message_history) + message.content
     file_uploaded = False
 
     try:
@@ -286,11 +319,20 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     if file_uploaded and not message.content:
         message.content = search_content
 
+    # Get collections from settings or default
+    if settings and settings.get("all_collection_names"):
+        collections = settings.get("all_collection_names")
+    else:
+        collections = vector_store.get_collections()
+
     if message.content:
-        search_results = await perform_search(user_content=search_content,
-                                              model_name=get_embeddings_model_name(),
-                                              similarity_threshold=get_similarity_threshold(),
-                                              collection_name=get_collection_name())
+        # Search all collections with the same embedding (embedding now generated inside)
+        search_results = await perform_multi_collection_search(
+            search_content,
+            get_embeddings_model_name(),
+            get_similarity_threshold(),
+            collections
+        )
         if debug_mode:
             await print_debug_content(settings, search_content,
                                       search_results)
@@ -309,6 +351,7 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
                 "max_tokens": settings["max_tokens"],
                 "temperature": settings["temperature"]
             },
+            cl.user_session.get("chat_profile"),
             stream_response=settings.get("stream", True)
         )
 
@@ -320,21 +363,16 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     await resp.send()
 
 
-async def handle_user_message_api(
+async def handle_user_message_api( # pylint: disable=too-many-arguments
     message_content: str,
     similarity_threshold: float,
     generative_model_settings: ModelSettings,
     embeddings_model_settings: ModelSettings,
-    vectordb_collection: str
+    vectordb_collections: list[str],
+    product_name: str,
     ) -> str:
     """
     API handler for user messages without Chainlit context.
-
-    Args:
-        message_content: The user's input message as a string
-
-    Returns:
-        The AI generated response as a string
     """
     response = MockMessage(content="", urls=[])
 
@@ -344,24 +382,22 @@ async def handle_user_message_api(
         response.content = error_message
         return response
 
-    # Perform search and build prompt
-    search_results = await perform_search(
-        user_content=message_content,
-        model_name=embeddings_model_settings["model"],
+    # Perform search in all collections (embedding generated inside)
+    search_results = await perform_multi_collection_search(
+        message_content,
+        embeddings_model_settings["model"],
         similarity_threshold=similarity_threshold,
-        collection_name=vectordb_collection
+        collections=vectordb_collections
     )
 
     message = MockMessage(content=message_content + build_prompt(search_results), urls=[])
 
-     # Process user message and get AI response
+    # Process user message and get AI response
     is_error = await get_response(
         {"keep_history": False}, message, response, generative_model_settings,
-        stream_response=False,
+        product_name, stream_response=False
     )
-
     if not is_error:
-        # Extend response with searched jira urls
         append_searched_urls(search_results, response, urls_as_list=True)
 
     return response
@@ -392,12 +428,6 @@ def get_similarity_threshold() -> float:
     # If threshold is above 1, cap it at 1
     return min(threshold, 1.0)
 
-def get_collection_name() -> str:
-    """Get name of database collection for retrieval."""
-
-    settings = cl.user_session.get("settings")
-
-    return settings.get("collection_name", config.vectordb_collection_name)
 
 def get_embeddings_model_name() -> str:
     """Get name of the embeddings model."""

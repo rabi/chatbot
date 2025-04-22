@@ -71,7 +71,7 @@ async def setup_chat_settings():
     Set up the chat settings interface with model selection,
     temperature, token limits, and other configuration options.
     """
-    collection_names, initial_collection_index = vector_store.get_collection_settings()
+    collection_names = vector_store.get_collections()
     generative_model_names = await discover_generative_model_names()
     embeddings_model_names = await discover_embeddings_model_names()
     if not generative_model_names or not embeddings_model_names:
@@ -123,16 +123,30 @@ async def setup_chat_settings():
                 step=0.05,
             ),
             Select(
-                id="collection_name",
-                label="Vector DB Collection",
+                id="jira_collection_name",
+                label="Vector DB Collection for Jira",
                 values=collection_names,
-                initial_index=initial_collection_index,
+                initial_index=collection_names.index(
+                    config.vectordb_collection_name_jira
+                ),
+            ),
+            Select(
+                id="errata_collection_name",
+                label="Vector DB Collection for Errata",
+                values=collection_names,
+                initial_index=collection_names.index(
+                    config.vectordb_collection_name_errata
+                ),
             ),
             Switch(id="stream", label="Stream a response", initial=True),
             Switch(id="debug_mode", label="Debug Mode", initial=False),
             Switch(id="keep_history", label="Keep message history in thread", initial=True)
         ]
     ).send()
+    settings["all_collection_names"] = [
+        settings["jira_collection_name"],
+        settings["errata_collection_name"]
+    ]
     cl.user_session.set("settings", settings)
 
 
