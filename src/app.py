@@ -143,10 +143,6 @@ async def setup_chat_settings():
             Switch(id="keep_history", label="Keep message history in thread", initial=True)
         ]
     ).send()
-    settings["all_collection_names"] = [
-        settings["jira_collection_name"],
-        settings["errata_collection_name"]
-    ]
     cl.user_session.set("settings", settings)
 
 
