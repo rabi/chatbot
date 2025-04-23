@@ -319,11 +319,11 @@ async def handle_user_message(message: cl.Message, debug_mode=False):
     if file_uploaded and not message.content:
         message.content = search_content
 
-    # Get collections from settings or default
-    if settings and settings.get("all_collection_names"):
-        collections = settings.get("all_collection_names")
-    else:
-        collections = vector_store.get_collections()
+    # Get collections from settings
+    collections = [
+        settings["jira_collection_name"],
+        settings["errata_collection_name"],
+    ]
 
     if message.content:
         # Search all collections with the same embedding (embedding now generated inside)
