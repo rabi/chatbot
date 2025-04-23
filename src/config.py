@@ -30,7 +30,8 @@ class Config:
     vectordb_url: str
     vectordb_api_key: str
     vectordb_port: int
-    vectordb_collection_name: str
+    vectordb_collection_name_jira: str
+    vectordb_collection_name_errata: str
     search_instruction: str
     search_similarity_threshold: float
     search_top_n: int
@@ -73,8 +74,10 @@ class Config:
                 "VECTORDB_URL", "http://localhost:6333"),
             vectordb_api_key=os.environ.get("VECTORDB_API_KEY", ""),
             vectordb_port=int(os.environ.get("VECTORDB_PORT", 6333)),
-            vectordb_collection_name=os.environ.get(
-                "VECTORDB_COLLECTION_NAME", 'rca-knowledge-base'),
+            vectordb_collection_name_jira=os.environ.get(
+                "VECTORDB_COLLECTION_NAME_JIRA", 'rca-knowledge-base'),
+            vectordb_collection_name_errata=os.environ.get(
+                "VECTORDB_COLLECTION_NAME_ERRATA", 'rca-knowledge-base-experimental'),
             search_instruction=os.environ.get(
                 "SEARCH_INSTRUCTION", SEARCH_INSTRUCTION),
             search_similarity_threshold=float(

@@ -12,7 +12,8 @@ class VectorStore:
     """Abstract interface for vector storage and retrieval operations."""
 
     def search(
-        self, embedding: List[float], top_n: int, similarity_threshold: float
+        self, embedding: List[float], top_n: int, similarity_threshold: float,
+        collection_name: str,
     ) -> list:
         """
         Search for similar vectors in the database.
@@ -27,12 +28,13 @@ class VectorStore:
         """
         raise NotImplementedError
 
-    def get_collection_settings(self) -> tuple[list[str], int]:
+    def get_collections(self) -> list[str]:
         """
-        Fetches collection names and determines the initial index.
+        Fetches collection names from Qdrant and adds default collections
+        from the configuration if they exist.
 
         Returns:
-            Tuple of collection names and the initial collection index
+            List of collection names
         """
         raise NotImplementedError
 
@@ -49,22 +51,14 @@ class QdrantVectorStore(VectorStore):
         )
         cl.logger.info("Qdrant client initialized successfully.")
 
-    def get_collection_settings(self) -> tuple[list[str], int]:
-        """Fetches collection names and determines the initial index."""
-        collection_names = self._get_collections()
-        initial_collection_index = 0
-        if config.vectordb_collection_name in collection_names:
-            initial_collection_index = collection_names.index(config.vectordb_collection_name)
-        else:
-            # Handle case where default collection might not exist (e.g., first run)
-            # It's already added as the first element, so index 0 is correct.
-            cl.logger.warning("Default collection %s not found in Qdrant. " +
-                              "Using it as default anyway.", config.vectordb_collection_name)
-        return collection_names, initial_collection_index
+    def get_collections(self) -> list[str]:
+        """
+        Fetches collection names from Qdrant.
 
-    def _get_collections(self) -> list[str]:
-        """Fetches the list of collection names from Qdrant."""
-        collections = [config.vectordb_collection_name]  # Start with the default
+        Returns:
+            List of collection names
+        """
+        collections = []
         try:
             qdrant_collections = self.client.get_collections().collections
             # Add fetched collections, avoiding duplicates
@@ -73,11 +67,13 @@ class QdrantVectorStore(VectorStore):
                     collections.append(col.name)
         except ApiException as e:
             cl.logger.error("Failed to connect to Qdrant to list collections: %s", str(e))
+        if not collections:
+            cl.logger.error("No collections found in Qdrant.")
         return collections
 
     def search(
         self, embedding: List[float], top_n: int, similarity_threshold: float,
-        collection_name: str = config.vectordb_collection_name,
+        collection_name: str,
     ) -> list:
         """
         Search for similar vectors in the database.

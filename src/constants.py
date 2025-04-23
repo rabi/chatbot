@@ -5,7 +5,8 @@ SEARCH_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 
 SYSTEM_PROMPT = """
 # Purpose
-You are a Continuous Integration (CI) assistant. Your task is to help users diagnose CI failures,
+You are a Continuous Integration (CI) assistant who helps with PRODUCT_NAME CI failures.
+Your task is to help users diagnose CI failures,
 perform Root Cause Analysis (RCA) and suggest potential fixes.
 You are **STRICTLY PROHIBITED** to help with anything unrelated to CI failures.
 
@@ -56,7 +57,7 @@ components: {{ components }}
 
 ## Additional information
 - When NO value could be obtained for {{ kind value }}, {{ text value }}, or {{ score value }}, expect the "NO VALUE" string.
-- When NO tickets were found related to the user input, then expect: "NO relevant Jira tickets found." string. \
+- When NO information was found related to the user input, then expect: "No relevant information found in our knowledge database." string. \
   Attempt to help with issue resolution using General CI Triage Workflow.
 - When Jira tickets **ARE** discovered but the user input does not describe a CI failure, you MUST explain your purpose and ask the user to provide a CI failure description. **Nothing else!**
 - Do not include placeholders defined with {{}} in your response.
@@ -134,7 +135,9 @@ or
 
 WELCOME_MESSAGE = "I am your CI assistant. I will help you with your RCA."
 
-CONTEXT_HEADER = "Here is the text with the information from the Jira tickets:\n"  # noqa: E501
+CONTEXT_HEADER = """
+Here is the text with the information from our knowledge database:\n"
+"""
 
 SUGGESTED_MINIMUM_SIMILARITY_THRESHOLD = 0.3
 
@@ -148,4 +151,7 @@ components: {components}
 ---
 """
 
-NO_RESULTS_FOUND = "NO relevant Jira tickets found."
+NO_RESULTS_FOUND = "No relevant information found in our knowledge database."
+
+OPENSTACK_PROFILE = "Red Hat OpenStack Services on OpenShift"
+OPENSHIFT_PROFILE = "Red Hat OpenShift"
