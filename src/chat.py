@@ -89,7 +89,8 @@ async def perform_multi_collection_search(
         for r in results:
             r['collection'] = collection
         all_results.extend(results)
-        return sorted(all_results, key=lambda x: x.get('score', 0), reverse=True)
+
+    return sorted(all_results, key=lambda x: x.get('score', 0), reverse=True)
 
 
 def build_prompt(search_results: list[dict]) -> str:
