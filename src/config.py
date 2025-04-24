@@ -77,7 +77,7 @@ class Config:
             vectordb_collection_name_jira=os.environ.get(
                 "VECTORDB_COLLECTION_NAME_JIRA", 'rca-knowledge-base'),
             vectordb_collection_name_errata=os.environ.get(
-                "VECTORDB_COLLECTION_NAME_ERRATA", 'rca-knowledge-base-experimental'),
+                "VECTORDB_COLLECTION_NAME_ERRATA", 'rca-errata'),
             search_instruction=os.environ.get(
                 "SEARCH_INSTRUCTION", SEARCH_INSTRUCTION),
             search_similarity_threshold=float(
