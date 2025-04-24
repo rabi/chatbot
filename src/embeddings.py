@@ -6,10 +6,8 @@ from urllib.parse import urlparse
 import chainlit as cl
 import httpx
 from openai import AsyncOpenAI, OpenAIError
-from qdrant_client.http.exceptions import ApiException
 
 from config import config
-from vectordb import vector_store
 from generation import extract_model_ids
 
 # Initialize embedding LLM client
@@ -49,38 +47,6 @@ async def generate_embedding(
     except OpenAIError as e:
         cl.logger.error("Error generating embeddings: %s", str(e))
         return None
-
-
-async def search_similar_content(
-    search_string: str,
-    model_name: str,
-    collection_name: str,
-    top_n: int = config.search_top_n,
-    similarity_threshold: float = config.search_similarity_threshold,
-) -> List:
-    """
-    Search for similar content in the vector database.
-
-    Args:
-        search_string: The query to search for
-        model_name: The model to use for creating embeddings
-        top_n: Maximum number of results to return
-        similarity_threshold: Minimum similarity score threshold
-
-    Returns:
-        List of search results with text and metadata
-    """
-    try:
-        embedding = await generate_embedding(search_string, model_name)
-        if embedding is None:
-            return []
-
-        # Search vector database using the embedding
-        results = vector_store.search(embedding, top_n, similarity_threshold, collection_name)
-        return results
-    except (ApiException, OpenAIError, ValueError, KeyError) as e:
-        cl.logger.error("Error in search_similar_content: %s", str(e))
-        return []
 
 
 async def get_num_tokens(
