@@ -135,19 +135,19 @@ async def get_rerank_score(
 
     data = {
         "model": model,
-        "text_1": prompt,
-        "text_2": sub_chunks,
+        "query": prompt,
+        "documents": sub_chunks,
     }
 
-    rerank_url = f"{reranking_model_url}/score"
+    rerank_url = f"{reranking_model_url}/rerank"
     async with httpx.AsyncClient() as client:
         response = await client.post(rerank_url, headers=headers, json=data)
 
         if response.status_code == 200:
             response_data = response.json()
-            max_score_dict = max(response_data["data"],
-                                 key=lambda item: item.get("score", .0))
-            return max_score_dict.get("score", .0)
+            max_score_dict = max(response_data["results"],
+                                 key=lambda item: item.get("relevance_score", .0))
+            return max_score_dict.get("relevance_score", .0)
 
         response.raise_for_status()
 
