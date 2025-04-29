@@ -353,7 +353,7 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
     generative_model_settings: ModelSettings,
     embeddings_model_settings: ModelSettings,
     profile_name: str,
-    ) -> str:
+    ) -> MockMessage:
     """
     API handler for user messages without Chainlit context.
     """
@@ -372,12 +372,16 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
         return response
 
     # Perform search in all collections (embedding generated inside)
-    search_results = await perform_multi_collection_search(
-        message_content,
-        embeddings_model_settings["model"],
-        similarity_threshold=similarity_threshold,
-        collections=collections
-    )
+    try:
+        search_results = await perform_multi_collection_search(
+            message_content,
+            embeddings_model_settings["model"],
+            similarity_threshold=similarity_threshold,
+            collections=collections
+        )
+    except httpx.HTTPStatusError:
+        response.content = "An error occurred while searching the vector database."
+        return response
 
     message = MockMessage(content=message_content + build_prompt(search_results), urls=[])
 
