@@ -145,9 +145,9 @@ async def get_rerank_score(
 
         if response.status_code == 200:
             response_data = response.json()
-            max_score_dict = max(response_data["results"],
-                                 key=lambda item: item.get("relevance_score", .0))
-            return max_score_dict.get("relevance_score", .0)
+            if len(response_data["results"]) == 0:
+                return .0
+            return response_data["results"][0].get("relevance_score", .0)
 
         response.raise_for_status()
 
