@@ -4,7 +4,7 @@ FastAPI endpoints for the RCAccelerator API.
 from typing import Dict, Any
 from fastapi import FastAPI
 from pydantic import BaseModel, Field, field_validator
-from constants import CI_LOGS_PROFILE, DOCS_PROFILE
+from constants import CI_LOGS_PROFILE, DOCS_PROFILE, RCA_FULL_PROFILE
 from chat import handle_user_message_api
 from config import config
 from settings import ModelSettings
@@ -72,9 +72,9 @@ class ChatRequest(BaseModel):
     @classmethod
     def validate_product_name(cls, value: str) -> str:
         """Validate the product name."""
-        if value not in [CI_LOGS_PROFILE, DOCS_PROFILE]:
+        if value not in [CI_LOGS_PROFILE, DOCS_PROFILE, RCA_FULL_PROFILE]:
             raise ValueError("Invalid profile name. Available profiles are: " +
-                             f"{[CI_LOGS_PROFILE, DOCS_PROFILE]}")
+                             f"{[CI_LOGS_PROFILE, DOCS_PROFILE, RCA_FULL_PROFILE]}.")
         return value
 
 
