@@ -22,12 +22,12 @@ class ChatRequest(BaseModel):
     content: str
     similarity_threshold: float = Field(
         config.search_similarity_threshold,
-        gte=-1.0,
+        ge=-1.0,
         le=1.0
         )
     temperature: float = Field(
         config.default_temperature,
-        gte=0.0,
+        ge=0.0,
         le=1.0
     )
     max_tokens: int = Field(
