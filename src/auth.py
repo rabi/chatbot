@@ -39,7 +39,7 @@ class DatabaseAuthentification(Authentification):
         self.engine = create_engine(self.database_url)
         self.session = sessionmaker(bind=self.engine)
 
-    def authenticate(self, username: str, password: str) -> cl.User:
+    def authenticate(self, username: str, password: str) -> cl.User | None:
         """
         Authenticate a user by checking the username and password
         against the database.

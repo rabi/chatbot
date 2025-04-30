@@ -15,7 +15,7 @@ gen_llm = AsyncOpenAI(
 )
 
 
-async def discover_generative_model_names() -> str:
+async def discover_generative_model_names() -> list[str]:
     """Discover available generative LLM models."""
     models = await gen_llm.models.list()
     return extract_model_ids(models)
