@@ -12,7 +12,7 @@ class VectorStore:
     """Abstract interface for vector storage and retrieval operations."""
 
     def search(
-        self, embedding: List[float], top_n: int, similarity_threshold: float,
+        self, embedding: List[float], similarity_threshold: float,
         collection_name: str,
     ) -> list:
         """
@@ -20,8 +20,8 @@ class VectorStore:
 
         Args:
             embedding: Vector embedding to search with
-            top_n: Maximum number of results to return
             similarity_threshold: Minimum similarity score threshold
+            collection_name: Name of the collection to search in.
 
         Returns:
             List of search results with scores and metadata
@@ -72,7 +72,7 @@ class QdrantVectorStore(VectorStore):
         return collections
 
     def search(
-        self, embedding: List[float], top_n: int, similarity_threshold: float,
+        self, embedding: List[float], similarity_threshold: float,
         collection_name: str,
     ) -> list:
         """
@@ -80,8 +80,8 @@ class QdrantVectorStore(VectorStore):
 
         Args:
             embedding: Vector embedding to search with
-            top_n: Maximum number of results to return
             similarity_threshold: Minimum similarity score threshold
+            collection_name: Name of the collection to search in.
 
         Returns:
             List of search results with scores and metadata
@@ -95,7 +95,6 @@ class QdrantVectorStore(VectorStore):
             search_results = self.client.search(
                 collection_name=collection_name,
                 query_vector=embedding,
-                limit=top_n,
             )
 
             for res in search_results:
@@ -109,6 +108,7 @@ class QdrantVectorStore(VectorStore):
                             "components": res.payload["components"],
                         }
                     )
+
             return results
         except ApiException as e:
             cl.logger.error("Error in vector search: %s", str(e))
