@@ -159,3 +159,4 @@ NO_RESULTS_FOUND = "No relevant information found in our knowledge database."
 
 CI_LOGS_PROFILE = "Analyse CI logs"
 DOCS_PROFILE = "Chat with documentation and errata"
+RCA_FULL_PROFILE = "RCA for CI failures"

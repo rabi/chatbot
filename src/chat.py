@@ -12,6 +12,7 @@ from settings import ModelSettings
 from config import config
 from constants import (
     DOCS_PROFILE,
+    RCA_FULL_PROFILE,
     SEARCH_RESULTS_TEMPLATE,
     NO_RESULTS_FOUND
     )
@@ -462,6 +463,13 @@ def get_collections_per_profile(
             config.vectordb_collection_name_documentation,
             config.vectordb_collection_name_errata,
         ]
+    if profile_name == RCA_FULL_PROFILE:
+        return [
+            config.vectordb_collection_name_jira,
+            config.vectordb_collection_name_documentation,
+            config.vectordb_collection_name_errata,
+        ]
+
     return [
         config.vectordb_collection_name_jira,
         config.vectordb_collection_name_ci_logs,
