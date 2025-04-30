@@ -18,6 +18,10 @@ class Config:
     """Configuration class for the RCA chatbot."""
     generation_llm_api_url: str
     generation_llm_api_key: str
+    reranking_model_name: str
+    reranking_model_api_key: str
+    reranking_model_api_url: str
+    reranking_model_max_context: int
     embeddings_llm_api_url: str
     embeddings_llm_api_key: str
     embeddings_llm_max_context: int
@@ -50,6 +54,19 @@ class Config:
                 "GENERATION_LLM_API_URL", "http://localhost:8000/v1"),
             generation_llm_api_key=os.environ.get(
                 "GENERATION_LLM_API_KEY", ""),
+            reranking_model_name=os.environ.get(
+                "RERANKING_MODEL_NAME", "BAAI/bge-reranker-v2-m3"
+            ),
+            reranking_model_api_url=os.environ.get(
+                "RERANKING_MODEL_API_URL", "http://localhost:8001/v1"
+            ),
+            reranking_model_api_key=os.environ.get(
+                "RERANKING_MODEL_API_KEY", ""
+            ),
+            reranking_model_max_context=int(os.environ.get(
+                "RERANKING_MODEL_MAX_CONTEXT",
+                8192,
+            )),
             embeddings_llm_api_url=os.environ.get(
                 "EMBEDDINGS_LLM_API_URL", "http://localhost:8000/v1"),
             embeddings_llm_api_key=os.environ.get(

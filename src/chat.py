@@ -7,7 +7,7 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from vectordb import vector_store
 from generation import get_response
-from embeddings import get_num_tokens, generate_embedding
+from embeddings import get_num_tokens, generate_embedding, get_rerank_score
 from settings import ModelSettings
 from config import config
 from constants import (
@@ -52,9 +52,11 @@ async def perform_multi_collection_search(
         )
         for r in results:
             r['collection'] = collection
+            r['rerank_score'] = await get_rerank_score(message_content, r['text'])
+
         all_results.extend(results)
 
-    return sorted(all_results, key=lambda x: x.get('score', 0), reverse=True)
+    return sorted(all_results, key=lambda x: x.get('rerank_score', 0), reverse=True)
 
 
 def build_prompt(search_results: list[dict]) -> str:
@@ -114,8 +116,8 @@ def append_searched_urls(search_results, resp, urls_as_list=False):
     for result in search_results:
         url = result.get('url')
         if url not in deduped_urls:
-            score = result.get('score', 0)
-            search_message += f'🔗 {url}, Similarity Score: {score}\n'
+            rerank_score = result.get('rerank_score', 0)
+            search_message += f'🔗 {url}, (_Similarity Score_: {rerank_score})\n'
             deduped_urls.append(url)
     if urls_as_list and deduped_urls:
         if hasattr(resp, 'urls'):
@@ -179,11 +181,13 @@ async def print_debug_content(
         search_content: str,
         search_results: list[dict],
         message_content: str) -> None:
-    """Print debug content if user requested it.
+    """Print debug content if the user requested it.
 
     Args:
         settings: The settings user provided through the UI.
-        search_results: The results we obtained from the vector database.
+        search_results: The results we got from the vector database.
+        search_content: The content we used to search the vector database.
+        message_content: The content of the user's message.
     """
     # Initialize debug_content with all settings
     debug_content = ""
@@ -211,7 +215,8 @@ async def print_debug_content(
         for i, result in enumerate(search_results[:config.search_top_n], 1):
             debug_content += (
                 f"**Result {i}**\n"
-                f"- Score: {result.get('score', 0)}\n"
+                f"- Cosine similarity: {result.get('score', 0)}\n"
+                f"- Rerank score: {result.get('rerank_score', 0)}\n"
                 f"- URL: {result.get('url', 'N/A')}\n\n"
                 f"Preview:\n"
                 f"```\n"
@@ -297,12 +302,19 @@ async def handle_user_message(
 
     if message.content:
         # Search all collections with the same embedding (embedding now generated inside)
-        search_results = await perform_multi_collection_search(
-            search_content,
-            get_embeddings_model_name(),
-            get_similarity_threshold(),
-            collections
-        )
+        try:
+            search_results = await perform_multi_collection_search(
+                search_content,
+                get_embeddings_model_name(),
+                get_similarity_threshold(),
+                collections
+            )
+        except httpx.HTTPStatusError as e:
+            cl.logger.error(e)
+            resp.content = "An error occurred while searching the vector database."
+            await resp.send()
+            return
+
         message.content += build_prompt(search_results)
 
         if debug_mode:
@@ -340,7 +352,7 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
     generative_model_settings: ModelSettings,
     embeddings_model_settings: ModelSettings,
     profile_name: str,
-    ) -> str:
+    ) -> MockMessage:
     """
     API handler for user messages without Chainlit context.
     """
@@ -359,12 +371,16 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
         return response
 
     # Perform search in all collections (embedding generated inside)
-    search_results = await perform_multi_collection_search(
-        message_content,
-        embeddings_model_settings["model"],
-        similarity_threshold=similarity_threshold,
-        collections=collections
-    )
+    try:
+        search_results = await perform_multi_collection_search(
+            message_content,
+            embeddings_model_settings["model"],
+            similarity_threshold=similarity_threshold,
+            collections=collections
+        )
+    except httpx.HTTPStatusError:
+        response.content = "An error occurred while searching the vector database."
+        return response
 
     message = MockMessage(content=message_content + build_prompt(search_results), urls=[])
 
