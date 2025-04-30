@@ -14,7 +14,7 @@ from embeddings import discover_embeddings_model_names
 
 
 @cl.set_chat_profiles
-async def chat_profile():
+async def chat_profile() -> list[cl.ChatProfile]:
     """
     Define the chat profile for the application.
     This function sets up the chat profile with a name, description,
@@ -47,6 +47,20 @@ async def chat_profile():
                 ),
             ],
         ),
+        cl.ChatProfile(
+            name=constants.RCA_FULL_PROFILE,
+            markdown_description="Help me with RCA for CI failures. Use all "
+                                 "available collections (documentation, Jira,"
+                                 "errata, ...)",
+            icon="/public/books-icon.png",
+            starters=[
+                cl.Starter(
+                    label="Help me with RCA",
+                    message="Explain me how to get help with CI failures.",
+                    icon="/public/debug.svg",
+                ),
+            ],
+        )
     ]
 
 
