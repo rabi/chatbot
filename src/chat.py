@@ -464,4 +464,5 @@ def get_collections_per_profile(
         ]
     return [
         config.vectordb_collection_name_jira,
+        config.vectordb_collection_name_ci_logs,
     ]
