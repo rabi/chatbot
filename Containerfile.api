@@ -4,6 +4,8 @@ USER root
 RUN groupadd -g 65532 chatgroup && \
     useradd -u 65532 -g chatgroup chatuser
 
+RUN dnf install -y krb5-workstation krb5-libs
+
 WORKDIR /app
 RUN chown -R chatuser:chatgroup /app
 

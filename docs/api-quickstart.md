@@ -114,3 +114,73 @@ Response:
   ]
 }
 ```
+
+### `POST /rca-from-tempest`
+
+#### Description
+
+Extracts Root Cause Analyses (RCAs) from a Tempest test report URL. This endpoint fetches the HTML report, parses out failed tests and their tracebacks, and generates an RCA for each unique test failure.
+
+#### Request Body
+
+JSON object matching the schema:
+
+| Field               | Type   | Constraints | Description                               |
+|---------------------|--------|-------------|-------------------------------------------|
+| `tempest_report_url`| string | Required    | URL of the Tempest report HTML file.      |
+
+#### Example Request
+
+```json
+POST /rca-from-tempest
+Content-Type: application/json
+
+{
+  "tempest_report_url": "https://storage.example.com/ci-logs/tempest-report.html"
+}
+```
+
+#### Response Body
+
+JSON array of objects, each containing:
+
+| Field       | Type            | Description                                      |
+|-------------|-----------------|--------------------------------------------------|
+| `test_name` | string          | The name of the failed test.                     |
+| `response`  | string          | AI-generated root cause analysis for the failure.|
+| `urls`      | array of string | Zero or more URLs deemed relevant to the failure.|
+
+#### Example Response
+
+```json
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+[
+  {
+    "test_name": "test_volume_boot_pattern",
+    "response": "The test failed because the instance failed to boot from volume. The traceback shows a timeout waiting for the instance to become active. This is likely due to an issue with the Cinder volume service not properly attaching the volume to the instance.",
+    "urls": [
+      "https://jira.my-company.com/browse/CI-5678",
+      "https://docs.openstack.org/cinder/latest/troubleshooting.html"
+    ]
+  },
+  {
+    "test_name": "test_network_basic_ops",
+    "response": "The network connectivity test failed due to a timeout waiting for the VM to become accessible via SSH. This suggests either a networking configuration issue or a problem with the security group rules.",
+    "urls": [
+      "https://jira.my-company.com/browse/NET-1234"
+    ]
+  }
+]
+```
+
+### Example Curl Request
+
+```bash
+curl -X POST https://my-server.com/rca-from-tempest \
+    -H "Content-Type: application/json" \
+    -d '{
+      "tempest_report_url": "https://storage.example.com/ci-logs/tempest-report.html"
+    }'
+```
