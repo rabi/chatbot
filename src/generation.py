@@ -5,7 +5,7 @@ from openai import AsyncOpenAI, OpenAIError
 
 from settings import HistorySettings, ModelSettings
 from config import config
-from constants import DOCS_PROFILE, RCA_FULL_PROFILE
+from constants import DOCS_PROFILE, RCA_FULL_PROFILE, CI_LOGS_PROFILE
 
 # Initialize generative LLM client
 gen_llm = AsyncOpenAI(
@@ -108,7 +108,6 @@ def get_system_prompt_per_profile(profile_name: str) -> str:
     """
     if profile_name == DOCS_PROFILE:
         return config.docs_system_prompt
-    if profile_name == RCA_FULL_PROFILE:
-        return config.ci_logs_system_prompt
-
+    if profile_name in [CI_LOGS_PROFILE, RCA_FULL_PROFILE]:
+        return config.ci_logs_system_prompt + config.jira_formatting_syntax_prompt
     return config.ci_logs_system_prompt
