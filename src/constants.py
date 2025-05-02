@@ -77,6 +77,10 @@ If tests are failing try following:
 - Is it an OSP component or k8s operator issue?
 - Create a Jira ticket.
 
+"""
+
+JIRA_FORMATTING_SYNTAX = """
+
 ## Jira Formatting Notation
 
 Following are examples of common formatting syntax used in Jira items

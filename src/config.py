@@ -8,7 +8,8 @@ from constants import (
     DOCS_SYSTEM_PROMPT,
     WELCOME_MESSAGE,
     CONTEXT_HEADER,
-    SEARCH_INSTRUCTION
+    SEARCH_INSTRUCTION,
+    JIRA_FORMATTING_SYNTAX,
 )
 
 
@@ -46,6 +47,7 @@ class Config:
     docs_system_prompt: str
     prompt_header: str
     welcome_message: str
+    jira_formatting_syntax_prompt: str
 
     @classmethod
     def from_env(cls) -> 'Config':
@@ -111,7 +113,9 @@ class Config:
             ci_logs_system_prompt=os.environ.get("CI_LOGS_SYSTEM_PROMPT", CI_LOGS_SYSTEM_PROMPT),
             docs_system_prompt=os.environ.get("DOCS_SYSTEM_PROMPT", DOCS_SYSTEM_PROMPT),
             welcome_message=os.environ.get("WELCOME_MESSAGE", WELCOME_MESSAGE),
-            prompt_header=os.environ.get("CONTEXT_HEADER", CONTEXT_HEADER)
+            prompt_header=os.environ.get("CONTEXT_HEADER", CONTEXT_HEADER),
+            jira_formatting_syntax_prompt=os.environ.get(
+                "JIRA_FORMATTING_SYNTAX", JIRA_FORMATTING_SYNTAX)
         )
 
 
