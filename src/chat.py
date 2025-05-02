@@ -14,7 +14,8 @@ from constants import (
     DOCS_PROFILE,
     RCA_FULL_PROFILE,
     SEARCH_RESULTS_TEMPLATE,
-    NO_RESULTS_FOUND
+    NO_RESULTS_FOUND,
+    TEXT_UPLOAD_TEMPLATE,
     )
 
 
@@ -273,7 +274,7 @@ async def handle_user_message(
     try:
         if message.elements and message.elements[0].path:
             with open(message.elements[0].path, 'r', encoding='utf-8') as file:
-                message.content += file.read()
+                message.content += TEXT_UPLOAD_TEMPLATE.format(text=file.read())
     except OSError as e:
         cl.logger.error(e)
         resp.content = "An error occurred while processing your file."
