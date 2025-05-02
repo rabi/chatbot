@@ -161,6 +161,18 @@ components: {components}
 
 NO_RESULTS_FOUND = "No relevant information found in our knowledge database."
 
+TEXT_UPLOAD_TEMPLATE = """
+Following text may include information necessary to resolution of user query:
+
+Text:
+---
+
+{text}
+
+---
+"""
+
+# Profiles
 CI_LOGS_PROFILE = "Analyse CI logs"
 DOCS_PROFILE = "Chat with documentation and errata"
 RCA_FULL_PROFILE = "RCA for CI failures"
