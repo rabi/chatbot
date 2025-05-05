@@ -51,6 +51,10 @@ class ChatRequest(BaseModel):
         CI_LOGS_PROFILE,
         description="The name of the profile to use."
     )
+    enable_rerank: bool = Field(
+        config.enable_rerank,
+        description="Whether to enable reranking."
+    )
 
     @field_validator('generative_model_name', mode='after')
     @classmethod
@@ -183,6 +187,7 @@ async def process_prompt(message_data: ChatRequest) -> Dict[str, Any]:
         generative_model_settings,
         embeddings_model_settings,
         message_data.profile_name,
+        message_data.enable_rerank,
         )
 
     return  {
@@ -211,8 +216,6 @@ async def process_rca(request: RcaRequest) -> List[RcaResponseItem]:
     embeddings_model_settings: ModelSettings = {
         "model": default_chat_request.embeddings_model_name,
     }
-    similarity_threshold = default_chat_request.similarity_threshold
-    profile_name = default_chat_request.profile_name
 
     unique_items = {}
     for item in traceback_items:
@@ -225,10 +228,11 @@ async def process_rca(request: RcaRequest) -> List[RcaResponseItem]:
         message = f"Test: {test_name}\n\n{item['traceback']}"
         task = handle_user_message_api(
             message_content=message,
-            similarity_threshold=similarity_threshold,
+            similarity_threshold=default_chat_request.similarity_threshold,
             generative_model_settings=generative_model_settings,
             embeddings_model_settings=embeddings_model_settings,
-            profile_name=profile_name,
+            profile_name=default_chat_request.profile_name,
+            enable_rerank=default_chat_request.enable_rerank,
         )
         tasks.append((test_name, task))
 

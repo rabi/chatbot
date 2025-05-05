@@ -38,27 +38,44 @@ async def perform_multi_collection_search(
     embeddings_model_name: str,
     similarity_threshold: float,
     collections: list[str],
-    top_n: int = config.search_top_n
+    settings: dict,
 ) -> list[dict]:
-    """
-    Search multiple collections using a generated embedding from message_content.
-    Returns aggregated and sorted results from all collections.
+    """Search multiple collections using a generated embedding from message_content.
+
+    The function first queries all the collections from the vector database and
+    then sorts them based on the rerank score. The function returns the top n
+    results.
+
+    Args:
+         message_content: The content of the user's message.
+         embeddings_model_name: The name of the embedding model to use.
+         similarity_threshold: The similarity threshold to use.
+         collections: A list of collections to search.
+         settings: The settings user provided through the UI.
     """
     embedding = await generate_embedding(message_content, embeddings_model_name)
     if embedding is None:
         return []
+
     all_results = []
     for collection in collections:
         results = vector_store.search(
-            embedding, top_n, similarity_threshold, collection
+            embedding, similarity_threshold, collection
         )
+
         for r in results:
             r['collection'] = collection
-            r['rerank_score'] = await get_rerank_score(message_content, r['text'])
+            if settings['enable_rerank']:
+                r['rerank_score'] = await get_rerank_score(message_content, r['text'])
+            else:
+                r['rerank_score'] = None
 
         all_results.extend(results)
 
-    return sorted(all_results, key=lambda x: x.get('rerank_score', 0), reverse=True)
+    sort_key = 'rerank_score' if settings['enable_rerank'] else 'score'
+    sorted_results = sorted(all_results, key=lambda x: x.get(sort_key, 0), reverse=True)
+
+    return sorted_results[:int(settings['search_top_n'])]
 
 
 def build_prompt(search_results: list[dict]) -> str:
@@ -118,7 +135,9 @@ def append_searched_urls(search_results, resp, urls_as_list=False):
     for result in search_results:
         url = result.get('url')
         if url not in deduped_urls:
-            rerank_score = result.get('rerank_score', 0)
+            settings = cl.user_session.get("settings")
+            score_key = "score" if not settings["enable_rerank"] else "rerank_score"
+            rerank_score = result.get(score_key, 0)
             search_message += f'🔗 {url}, (_Similarity Score_: {rerank_score})\n'
             deduped_urls.append(url)
     if urls_as_list and deduped_urls:
@@ -214,11 +233,12 @@ async def print_debug_content(
     # Display vector DB debug information if debug mode is enabled
     if search_results:
         debug_content += "#### Vector DB Search Results:\n"
-        for i, result in enumerate(search_results[:config.search_top_n], 1):
+        for i, result in enumerate(search_results, 1):
+            score_key = "score" if not settings.get("enable_rerank") else "rerank_score"
             debug_content += (
                 f"**Result {i}**\n"
                 f"- Cosine similarity: {result.get('score', 0)}\n"
-                f"- Rerank score: {result.get('rerank_score', 0)}\n"
+                f"- Rerank score: {result.get(score_key, 0)}\n"
                 f"- URL: {result.get('url', 'N/A')}\n\n"
                 f"Preview:\n"
                 f"```\n"
@@ -309,7 +329,8 @@ async def handle_user_message(
                 search_content,
                 get_embeddings_model_name(),
                 get_similarity_threshold(),
-                collections
+                collections,
+                settings,
             )
         except httpx.HTTPStatusError as e:
             cl.logger.error(e)
@@ -354,6 +375,7 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
     generative_model_settings: ModelSettings,
     embeddings_model_settings: ModelSettings,
     profile_name: str,
+    enable_rerank: bool = True,
     ) -> MockMessage:
     """
     API handler for user messages without Chainlit context.
@@ -378,7 +400,11 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
             message_content,
             embeddings_model_settings["model"],
             similarity_threshold=similarity_threshold,
-            collections=collections
+            collections=collections,
+            settings={
+                "enable_rerank": enable_rerank,
+                "search_top_n": config.search_top_n,
+            },
         )
     except httpx.HTTPStatusError:
         response.content = "An error occurred while searching the vector database."

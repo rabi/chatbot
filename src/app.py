@@ -128,9 +128,18 @@ async def setup_chat_settings():
                 max=1,
                 step=0.05,
             ),
+            Slider(
+                id="search_top_n",
+                label="Get Top N Results from Search",
+                initial=config.search_top_n,
+                min=1,
+                max=25,
+                step=1
+            ),
             Switch(id="stream", label="Stream a response", initial=True),
             Switch(id="debug_mode", label="Debug Mode", initial=False),
-            Switch(id="keep_history", label="Keep message history in thread", initial=True)
+            Switch(id="keep_history", label="Keep message history in thread", initial=True),
+            Switch(id="enable_rerank", label="Use reranking", initial=True)
         ]
     ).send()
     cl.user_session.set("settings", settings)

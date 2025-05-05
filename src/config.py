@@ -19,6 +19,7 @@ class Config:
     """Configuration class for the RCA chatbot."""
     generation_llm_api_url: str
     generation_llm_api_key: str
+    enable_rerank: bool
     reranking_model_name: str
     reranking_model_api_key: str
     reranking_model_api_url: str
@@ -57,6 +58,8 @@ class Config:
                 "GENERATION_LLM_API_URL", "http://localhost:8000/v1"),
             generation_llm_api_key=os.environ.get(
                 "GENERATION_LLM_API_KEY", ""),
+            enable_rerank=os.environ.get(
+                "ENABLE_RERANK", "true").lower() == "true",
             reranking_model_name=os.environ.get(
                 "RERANKING_MODEL_NAME", "BAAI/bge-reranker-v2-m3"
             ),
