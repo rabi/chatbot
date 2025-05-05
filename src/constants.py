@@ -172,6 +172,13 @@ Text:
 ---
 """
 
+SEARCH_RESULT_TRUNCATED_CHUNK = """
+The following piece of information was truncated because it was too long:
+
+{text}
+---
+"""
+
 # Profiles
 CI_LOGS_PROFILE = "Analyse CI logs"
 DOCS_PROFILE = "Chat with documentation and errata"

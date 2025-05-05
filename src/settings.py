@@ -3,6 +3,8 @@ from typing import TypedDict
 
 from openai.types.chat import ChatCompletionMessageParam
 
+# A list of messages in a single thread.
+ThreadMessages = list[ChatCompletionMessageParam]
 
 class HistorySettings(TypedDict):
     """
@@ -13,7 +15,7 @@ class HistorySettings(TypedDict):
         message_history: The list of messages in the history.
     """
     keep_history: bool
-    message_history: list[ChatCompletionMessageParam]
+    message_history: ThreadMessages
 
 
 class ModelSettings(TypedDict):

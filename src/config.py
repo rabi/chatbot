@@ -28,6 +28,7 @@ class Config:
     embeddings_llm_api_key: str
     embeddings_llm_max_context: int
     generative_model: str
+    generative_model_max_context: int
     embeddings_model: str
     default_temperature: float
     default_max_tokens: int
@@ -84,7 +85,11 @@ class Config:
             )),
             generative_model=os.environ.get(
                 "GENERATION_LLM_MODEL_NAME",
-                'mistralai/Mistral-7B-Instruct-v0.3'),
+                'deepseek-ai/DeepSeek-R1-Distill-Llama-8B'),
+            generative_model_max_context=int(os.environ.get(
+                "GENERATIVE_MODEL_MAX_CONTEXT",
+                20000,
+            )),
             embeddings_model=os.environ.get(
                 "EMBEDDINGS_LLM_MODEL_NAME", 'BAAI/bge-m3'),
             default_temperature=float(

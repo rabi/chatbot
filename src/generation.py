@@ -3,7 +3,7 @@
 import chainlit as cl
 from openai import AsyncOpenAI, OpenAIError
 
-from settings import HistorySettings, ModelSettings
+from settings import ModelSettings, ThreadMessages
 from config import config
 from constants import DOCS_PROFILE, RCA_FULL_PROFILE, CI_LOGS_PROFILE
 
@@ -42,17 +42,12 @@ def _handle_context_size_limit(err: OpenAIError,
     return str(err)
 
 
-async def get_response(history_settings: HistorySettings, # pylint: disable=too-many-arguments
-                       user_message: cl.Message, response_msg: cl.Message,
+async def get_response(user_message: ThreadMessages,
+                       response_msg: cl.Message,
                        model_settings: ModelSettings,
-                       profile_name: str,
                        is_api: bool = False,
                        stream_response: bool = True) -> bool:
-    """Process the user's message and generate a response using the LLM.
-
-    This function constructs the prompt from the LLM by compbining the system
-    prompt with the user's input. It then sends the prepared message to the LLM
-    for response generation.
+    """Send a user's message and generate a response using the LLM.
 
     Args:
         user_message: The user's input message object.
@@ -61,19 +56,17 @@ async def get_response(history_settings: HistorySettings, # pylint: disable=too-
         model_settings: A dictionary containing LLM configuration.
         stream_response: Indicates whether we want to stream the response or
             get the process in a single chunk.
+        is_api: Indicates whether the function is called from the API or not.
+
+    Returns:
+        bool indicating whether the function was successful or not.
     """
     is_error = True
-    message_history = history_settings.get('message_history', [])
-    system_prompt = get_system_prompt_per_profile(profile_name)
-    if not message_history:
-        message_history = [
-            {"role": "system", "content": system_prompt},]
 
-    message_history.append({"role": "user", "content": user_message.content})
     try:
         if stream_response:
             async for stream_resp in await gen_llm.chat.completions.create(
-                messages=message_history, stream=stream_response,
+                messages=user_message, stream=stream_response,
                 **model_settings
             ):
                 if stream_resp.choices and len(stream_resp.choices) > 0:
@@ -81,18 +74,14 @@ async def get_response(history_settings: HistorySettings, # pylint: disable=too-
                         await response_msg.stream_token(token)
         else:
             response = await gen_llm.chat.completions.create(
-                messages=message_history, stream=stream_response,
+                messages=user_message, stream=stream_response,
                 **model_settings
             )
             response_msg.content = response.choices[0].message.content or ""
-        message_history.append({"role": "assistant",
-                                "content": response_msg.content})
-        if history_settings.get('keep_history', True) and not is_api:
-            cl.user_session.set('message_history', message_history)
+
         is_error = False
     except OpenAIError as e:
         err_msg = _handle_context_size_limit(e, is_api)
-
         if not is_api:
             cl.logger.error("Error in process_message_and_get_response: %s",
                             err_msg)
