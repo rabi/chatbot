@@ -118,7 +118,7 @@ def build_prompt(search_results: list[dict]) -> str:
     return config.prompt_header + "\n" + "\n".join(formatted_results)
 
 
-def append_searched_urls(search_results, resp, urls_as_list=False):
+def append_searched_urls(search_results, resp, enable_rerank, urls_as_list=False):
     """
     Append search urls.
 
@@ -135,8 +135,7 @@ def append_searched_urls(search_results, resp, urls_as_list=False):
     for result in search_results:
         url = result.get('url')
         if url not in deduped_urls:
-            settings = cl.user_session.get("settings")
-            score_key = "score" if not settings["enable_rerank"] else "rerank_score"
+            score_key = "score" if not enable_rerank else "rerank_score"
             rerank_score = result.get(score_key, 0)
             search_message += f'🔗 {url}, (_Similarity Score_: {rerank_score})\n'
             deduped_urls.append(url)
@@ -363,7 +362,7 @@ async def handle_user_message(
 
         if not is_error:
             # Extend response with searched jira urls
-            append_searched_urls(search_results, resp)
+            append_searched_urls(search_results, resp, settings.get("enable_rerank", True))
 
     update_msg_count()
     await resp.send()
@@ -418,7 +417,7 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
         profile_name, is_api=True, stream_response=False
     )
     if not is_error:
-        append_searched_urls(search_results, response, urls_as_list=True)
+        append_searched_urls(search_results, response, enable_rerank, urls_as_list=True)
 
     return response
 
