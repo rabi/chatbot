@@ -13,7 +13,7 @@ class VectorStore:
 
     def search(
         self, embedding: List[float], similarity_threshold: float,
-        collection_name: str,
+        collection_name: str, top_n: int = config.search_top_n,
     ) -> list:
         """
         Search for similar vectors in the database.
@@ -21,7 +21,8 @@ class VectorStore:
         Args:
             embedding: Vector embedding to search with
             similarity_threshold: Minimum similarity score threshold
-            collection_name: Name of the collection to search in.
+            collection_name: Name of the collection to search in
+            top_n: The maximum number of results to return.
 
         Returns:
             List of search results with scores and metadata
@@ -73,7 +74,7 @@ class QdrantVectorStore(VectorStore):
 
     def search(
         self, embedding: List[float], similarity_threshold: float,
-        collection_name: str,
+        collection_name: str, top_n: int = config.search_top_n,
     ) -> list:
         """
         Search for similar vectors in the database.
@@ -81,7 +82,8 @@ class QdrantVectorStore(VectorStore):
         Args:
             embedding: Vector embedding to search with
             similarity_threshold: Minimum similarity score threshold
-            collection_name: Name of the collection to search in.
+            collection_name: Name of the collection to search in
+            top_n: The maximum number of results to return.
 
         Returns:
             List of search results with scores and metadata
@@ -95,6 +97,7 @@ class QdrantVectorStore(VectorStore):
             search_results = self.client.search(
                 collection_name=collection_name,
                 query_vector=embedding,
+                limit=top_n,
             )
 
             for res in search_results:

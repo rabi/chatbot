@@ -75,7 +75,7 @@ async def perform_multi_collection_search(
     sort_key = 'rerank_score' if settings['enable_rerank'] else 'score'
     sorted_results = sorted(all_results, key=lambda x: x.get(sort_key, 0), reverse=True)
 
-    return sorted_results[:int(settings['search_top_n'])]
+    return sorted_results[:int(settings['rerank_top_n'])]
 
 
 def build_prompt(search_results: list[dict]) -> str:
@@ -403,7 +403,7 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
             collections=collections,
             settings={
                 "enable_rerank": enable_rerank,
-                "search_top_n": config.search_top_n,
+                "rerank_top_n": config.rerank_top_n,
             },
         )
     except httpx.HTTPStatusError:
