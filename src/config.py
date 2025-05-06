@@ -122,7 +122,7 @@ class Config:
 
             # The maximum number of points we can retrieve from a single vector
             # database collection.
-            search_top_n=int(os.environ.get("SEARCH_TOP_N", 15)),
+            search_top_n=int(os.environ.get("SEARCH_TOP_N", 10)),
 
             # The maximum number of points we pass to the generative model after
             # reranking.
