@@ -129,9 +129,9 @@ async def setup_chat_settings():
                 step=0.05,
             ),
             Slider(
-                id="search_top_n",
+                id="rerank_top_n",
                 label="Get Top N Results from Search",
-                initial=config.search_top_n,
+                initial=config.rerank_top_n,
                 min=1,
                 max=25,
                 step=1

@@ -44,6 +44,7 @@ class Config:
     search_instruction: str
     search_similarity_threshold: float
     search_top_n: int
+    rerank_top_n: int
     ci_logs_system_prompt: str
     docs_system_prompt: str
     prompt_header: str
@@ -112,13 +113,20 @@ class Config:
                 "SEARCH_INSTRUCTION", SEARCH_INSTRUCTION),
             search_similarity_threshold=float(
                 os.environ.get("SEARCH_SIMILARITY_THRESHOLD", 0.8)),
-            search_top_n=int(os.environ.get("SEARCH_TOP_N", 5)),
             ci_logs_system_prompt=os.environ.get("CI_LOGS_SYSTEM_PROMPT", CI_LOGS_SYSTEM_PROMPT),
             docs_system_prompt=os.environ.get("DOCS_SYSTEM_PROMPT", DOCS_SYSTEM_PROMPT),
             welcome_message=os.environ.get("WELCOME_MESSAGE", WELCOME_MESSAGE),
             prompt_header=os.environ.get("CONTEXT_HEADER", CONTEXT_HEADER),
             jira_formatting_syntax_prompt=os.environ.get(
-                "JIRA_FORMATTING_SYNTAX", JIRA_FORMATTING_SYNTAX)
+                "JIRA_FORMATTING_SYNTAX", JIRA_FORMATTING_SYNTAX),
+
+            # The maximum number of points we can retrieve from a single vector
+            # database collection.
+            search_top_n=int(os.environ.get("SEARCH_TOP_N", 15)),
+
+            # The maximum number of points we pass to the generative model after
+            # reranking.
+            rerank_top_n=int(os.environ.get("RERANK_TOP_N", 5)),
         )
 
 
