@@ -42,11 +42,12 @@ def _handle_context_size_limit(err: OpenAIError,
     return str(err)
 
 
-async def get_response(user_message: ThreadMessages,
+async def get_response(user_message: ThreadMessages, # pylint: disable=too-many-arguments
                        response_msg: cl.Message,
                        model_settings: ModelSettings,
                        is_api: bool = False,
-                       stream_response: bool = True) -> bool:
+                       stream_response: bool = True,
+                       step: cl.Step = None) -> bool:
     """Send a user's message and generate a response using the LLM.
 
     Args:
@@ -57,6 +58,7 @@ async def get_response(user_message: ThreadMessages,
         stream_response: Indicates whether we want to stream the response or
             get the process in a single chunk.
         is_api: Indicates whether the function is called from the API or not.
+        step: Optional step object to stream reasoning content to.
 
     Returns:
         bool indicating whether the function was successful or not.
@@ -70,14 +72,27 @@ async def get_response(user_message: ThreadMessages,
                 **model_settings
             ):
                 if stream_resp.choices and len(stream_resp.choices) > 0:
-                    if token := stream_resp.choices[0].delta.content or "":
+                    delta = stream_resp.choices[0].delta
+
+                    # Stream content to the response message
+                    if token := delta.content or "":
                         await response_msg.stream_token(token)
+
+                    # Stream reasoning content to the step if it exists
+                    if step and hasattr(delta, "reasoning_content") and delta.reasoning_content:
+                        await step.stream_token(delta.reasoning_content)
         else:
             response = await gen_llm.chat.completions.create(
                 messages=user_message, stream=stream_response,
                 **model_settings
             )
             response_msg.content = response.choices[0].message.content or ""
+
+            # If we have a step and reasoning content, update the step output
+            message = response.choices[0].message
+            if (step and hasattr(message, "reasoning_content")
+                    and message.reasoning_content):
+                step.output = response.choices[0].message.reasoning_content
 
         is_error = False
     except OpenAIError as e:
