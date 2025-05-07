@@ -4,6 +4,7 @@ import chainlit as cl
 import httpx
 from openai.types.chat import ChatCompletionAssistantMessageParam
 
+import constants
 from prompt import build_prompt
 from vectordb import vector_store
 from generation import get_response
@@ -296,7 +297,7 @@ async def handle_user_message(
             await resp.send()
             return
 
-        _, full_prompt = await build_prompt(
+        is_error_prompt, full_prompt = await build_prompt(
             search_results,
             message.content,
             cl.user_session.get("chat_profile"),
@@ -305,6 +306,8 @@ async def handle_user_message(
                 message_history=message_history,
             ),
         )
+        if is_error_prompt:
+            await cl.Message(content=constants.WARNING_MESSAGE_TRUNCATED_TEXT).send()
 
         if debug_mode:
             await print_debug_content(settings, search_content,
@@ -387,7 +390,6 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
             keep_history=cl.user_session.get,
             message_history=[],
         ),
-        is_api=True,
     )
     # Process user message and get AI response
     is_error = await get_response(

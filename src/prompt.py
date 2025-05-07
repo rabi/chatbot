@@ -1,5 +1,4 @@
 """A module responsible for building the prompt for the generative model."""
-import chainlit as cl
 from openai.types.chat import (
     ChatCompletionUserMessageParam,
     ChatCompletionSystemMessageParam,
@@ -11,17 +10,6 @@ from constants import (
 )
 from settings import HistorySettings, ThreadMessages
 from generation import get_system_prompt_per_profile
-
-
-async def print_truncated_warning(is_api: bool = False) -> None:
-    """Print a warning about the truncated search result if not in API."""
-    if not is_api:
-        await cl.Message(content="Warning! The content from the vector database "
-                           "has been truncated. Please consider one of the following "
-                           "options:\n"
-                           "  - Start a new thread\n"
-                           "  - Decrease the similarity threshold\n"
-                           "  - Decrease the top-k parameter\n").send()
 
 
 def search_result_to_str(search_result: dict) -> str:
@@ -52,7 +40,6 @@ async def build_prompt(
         user_message: str,
         profile_name: str,
         history_settings: HistorySettings,
-        is_api: bool = False,
 ) -> (bool, ThreadMessages):
     """Generate a full prompt that gets sent to the generative model.
 
@@ -71,7 +58,6 @@ async def build_prompt(
         user_message: The user's message content
         history_settings: Settings for the message history
         profile_name: The name of the profile for which to generate the prompt
-        is_api: Indicates whether the function is called from the API or not.
 
     Returns:
         List of messages that make up the full prompt. Each return value contains
@@ -135,7 +121,6 @@ async def build_prompt(
             full_prompt_len += len(truncated_search_result)
 
             is_error = True
-            await print_truncated_warning(is_api)
             break
 
         full_user_message += search_result_chunk

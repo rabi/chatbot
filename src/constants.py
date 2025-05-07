@@ -183,3 +183,10 @@ The following piece of information was truncated because it was too long:
 CI_LOGS_PROFILE = "Analyse CI logs"
 DOCS_PROFILE = "Chat with documentation and errata"
 RCA_FULL_PROFILE = "RCA for CI failures"
+
+WARNING_MESSAGE_TRUNCATED_TEXT ="""Warning!
+The content from the vector database has been truncated. Please consider one of the following options:
+    - Start a new thread
+    - Decrease the similarity threshold
+    - Decrease the top-k parameter
+"""
