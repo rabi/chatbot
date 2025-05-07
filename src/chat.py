@@ -73,7 +73,11 @@ async def perform_multi_collection_search(
     sort_key = 'rerank_score' if settings['enable_rerank'] else 'score'
     sorted_results = sorted(all_results, key=lambda x: x.get(sort_key, 0), reverse=True)
 
-    return sorted_results[:int(settings['rerank_top_n'])]
+    rerank_top_n = settings.get('rerank_top_n', config.rerank_top_n)
+    if not isinstance(rerank_top_n, int):
+        rerank_top_n = config.rerank_top_n
+
+    return sorted_results[:rerank_top_n]
 
 
 def append_searched_urls(search_results, resp, enable_rerank, urls_as_list=False):
