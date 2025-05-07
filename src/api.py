@@ -18,33 +18,46 @@ from embeddings import discover_embeddings_model_names
 
 app = FastAPI(title="RCAccelerator API")
 
-class ChatRequest(BaseModel):
-    """Request model for the chat endpoint."""
-    content: str
+class BaseModelSettings(BaseModel):
+    """Base model with common settings for model configuration."""
     similarity_threshold: float = Field(config.search_similarity_threshold, ge=-1.0, le=1.0)
     temperature: float = Field(config.default_temperature, ge=0.0, le=1.0)
     max_tokens: int = Field(config.default_max_tokens, gt=1, le=1024)
-    generative_model_name: str = Field(config.generative_model)
-    embeddings_model_name: str = Field(config.embeddings_model)
+    generative_model_name: str = Field("")
+    embeddings_model_name: str = Field("")
     profile_name: str = Field(CI_LOGS_PROFILE)
     enable_rerank: bool = Field(config.enable_rerank)
 
 
-async def validate_chat_request(request: ChatRequest) -> ChatRequest:
-    """Validate the ChatRequest object.
+class ChatRequest(BaseModelSettings):
+    """Request model for the chat endpoint."""
+    content: str
+
+
+class RcaRequest(BaseModelSettings):
+    """Request model for the RCA endpoint."""
+    tempest_report_url: HttpUrl = Field(..., description="URL of the Tempest report HTML file.")
+
+
+async def validate_settings(request: BaseModelSettings) -> BaseModelSettings:
+    """Validate the settings for any request.
     This function performs checks to ensure the API request is valid.
     Some checks are performed asynchronously which is why we don't use
     the built-in Pydantic validators.
     """
     available_generative_models = await discover_generative_model_names()
-    if request.generative_model_name not in available_generative_models:
+    if not request.generative_model_name:
+        request.generative_model_name = available_generative_models[0]
+    elif request.generative_model_name not in available_generative_models:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid generative model. Available: {available_generative_models}"
         )
 
     available_embedding_models = await discover_embeddings_model_names()
-    if request.embeddings_model_name not in available_embedding_models:
+    if not request.embeddings_model_name:
+        request.embeddings_model_name = available_embedding_models[0]
+    elif request.embeddings_model_name not in available_embedding_models:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid embeddings model. Available: {available_embedding_models}"
@@ -59,9 +72,15 @@ async def validate_chat_request(request: ChatRequest) -> ChatRequest:
 
     return request
 
-class RcaRequest(BaseModel):
-    """Request model for the RCA endpoint."""
-    tempest_report_url: HttpUrl = Field(..., description="URL of the Tempest report HTML file.")
+
+async def validate_chat_settings(request: ChatRequest) -> ChatRequest:
+    """Type-specific validation for ChatRequest."""
+    return await validate_settings(request)
+
+
+async def validate_rca_settings(request: RcaRequest) -> RcaRequest:
+    """Type-specific validation for RcaRequest."""
+    return await validate_settings(request)
 
 
 class RcaResponseItem(BaseModel):
@@ -142,7 +161,7 @@ async def fetch_and_parse_tempest_report(url: str) -> List[Dict[str, str]]:
 
 @app.post("/prompt")
 async def process_prompt(
-        message_data: ChatRequest = Depends(validate_chat_request)
+        message_data: ChatRequest = Depends(validate_chat_settings)
     ) -> Dict[str, Any]:
     """
     FastAPI endpoint that processes a message and returns an answer.
@@ -172,7 +191,9 @@ async def process_prompt(
 
 
 @app.post("/rca-from-tempest", response_model=List[RcaResponseItem])
-async def process_rca(request: RcaRequest) -> List[RcaResponseItem]:
+async def process_rca(
+        request: RcaRequest = Depends(validate_rca_settings)
+    ) -> List[RcaResponseItem]:
     """
     FastAPI endpoint that extracts Root Cause Analyses (RCAs) from a Tempest report URL.
     """
@@ -182,14 +203,13 @@ async def process_rca(request: RcaRequest) -> List[RcaResponseItem]:
         raise HTTPException(status_code=404, detail="No tracebacks found in " +
                             "the provided Tempest report URL.")
 
-    default_chat_request = ChatRequest(content="")
     generative_model_settings: ModelSettings = {
-        "model": default_chat_request.generative_model_name,
-        "max_tokens": default_chat_request.max_tokens,
-        "temperature": default_chat_request.temperature,
+        "model": request.generative_model_name,
+        "max_tokens": request.max_tokens,
+        "temperature": request.temperature,
     }
     embeddings_model_settings: ModelSettings = {
-        "model": default_chat_request.embeddings_model_name,
+        "model": request.embeddings_model_name,
     }
 
     unique_items = {}
@@ -203,11 +223,11 @@ async def process_rca(request: RcaRequest) -> List[RcaResponseItem]:
         message = f"Test: {test_name}\n\n{item['traceback']}"
         task = handle_user_message_api(
             message_content=message,
-            similarity_threshold=default_chat_request.similarity_threshold,
+            similarity_threshold=request.similarity_threshold,
             generative_model_settings=generative_model_settings,
             embeddings_model_settings=embeddings_model_settings,
-            profile_name=default_chat_request.profile_name,
-            enable_rerank=default_chat_request.enable_rerank,
+            profile_name=request.profile_name,
+            enable_rerank=request.enable_rerank,
         )
         tasks.append((test_name, task))
 
