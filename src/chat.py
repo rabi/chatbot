@@ -1,20 +1,19 @@
 """Handler for chat messages and responses."""
 from dataclasses import dataclass
-import re
 import chainlit as cl
 import httpx
-from openai.types.chat import ChatCompletionMessageParam
+from openai.types.chat import ChatCompletionAssistantMessageParam
 
+import constants
+from prompt import build_prompt
 from vectordb import vector_store
 from generation import get_response
 from embeddings import get_num_tokens, generate_embedding, get_rerank_score
-from settings import ModelSettings
+from settings import ModelSettings, HistorySettings, ThreadMessages
 from config import config
 from constants import (
     DOCS_PROFILE,
     RCA_FULL_PROFILE,
-    SEARCH_RESULTS_TEMPLATE,
-    NO_RESULTS_FOUND,
     TEXT_UPLOAD_TEMPLATE,
     )
 
@@ -75,47 +74,11 @@ async def perform_multi_collection_search(
     sort_key = 'rerank_score' if settings['enable_rerank'] else 'score'
     sorted_results = sorted(all_results, key=lambda x: x.get(sort_key, 0), reverse=True)
 
-    return sorted_results[:int(settings['rerank_top_n'])]
+    rerank_top_n = settings.get('rerank_top_n', config.rerank_top_n)
+    if not isinstance(rerank_top_n, int):
+        rerank_top_n = config.rerank_top_n
 
-
-def build_prompt(search_results: list[dict]) -> str:
-    """
-    Generate a prompt based on the information we retrieved from the vector
-    database.
-
-    Args:
-        search_results: A list of results obtained from the vector db
-
-    Returns:
-        Formatted string with search results
-    """
-    if not search_results:
-        return config.prompt_header + NO_RESULTS_FOUND
-
-    formatted_results = []
-
-    for res in search_results:
-        components = "NO VALUE"
-        if res.get('components', []):
-            components = ",".join([str(e) for e in res.get('components')])
-        result = SEARCH_RESULTS_TEMPLATE.format(
-            kind=res.get('kind', "NO VALUE"),
-            text=res.get('text', "NO VALUE"),
-            score=res.get('score', "NO VALUE"),
-            components=components
-        )
-
-        # Append additional fields
-        result += "\n".join(
-            [
-                f"{k}: {v}" for k, v in res.items()
-                if k not in ['kind', 'text', 'score', 'components']
-            ])
-        result += "\n---"
-
-        formatted_results.append(result)
-
-    return config.prompt_header + "\n" + "\n".join(formatted_results)
+    return sorted_results[:rerank_top_n]
 
 
 def append_searched_urls(search_results, resp, enable_rerank, urls_as_list=False):
@@ -200,7 +163,7 @@ async def print_debug_content(
         settings: dict,
         search_content: str,
         search_results: list[dict],
-        message_content: str) -> None:
+        message_content: ThreadMessages) -> None:
     """Print debug content if the user requested it.
 
     Args:
@@ -245,15 +208,14 @@ async def print_debug_content(
                 f"```\n\n"
             )
     # Escaping markdown
-    message_content = re.sub(f"([{re.escape(r'`[*_')}])", "\\\1", message_content)
-    debug_content += f"\n#### Full user message:\n```\n{message_content}\n```"
+    debug_content += f"\n#### Full user message:\n```\n{str(message_content)}\n```"
 
     cl.logger.debug(debug_content)
     await cl.Message(content=debug_content, author="debug").send()
 
 
-def _build_search_content_from_history(
-        message_history: list[ChatCompletionMessageParam]) -> str:
+def _build_search_content_from_history(message_history: ThreadMessages) -> str:
+    """Build string representation of messages from the history."""
     previous_message_content = ""
     if message_history:
         for message in message_history:
@@ -262,10 +224,8 @@ def _build_search_content_from_history(
     return previous_message_content
 
 
-def _filter_debug_messages(
-        message_history: list[ChatCompletionMessageParam]) -> list[ChatCompletionMessageParam]:
-    """Remove all debug messages from history.
-    """
+def _filter_debug_messages(message_history: ThreadMessages) -> ThreadMessages:
+    """Remove all debug messages from history."""
     if message_history:
         message_history = [
             message for message in message_history
@@ -337,28 +297,41 @@ async def handle_user_message(
             await resp.send()
             return
 
-        message.content += build_prompt(search_results)
+        is_error_prompt, full_prompt = await build_prompt(
+            search_results,
+            message.content,
+            cl.user_session.get("chat_profile"),
+            HistorySettings(
+                keep_history=settings["keep_history"],
+                message_history=message_history,
+            ),
+        )
+        if is_error_prompt:
+            await cl.Message(content=constants.WARNING_MESSAGE_TRUNCATED_TEXT).send()
 
         if debug_mode:
             await print_debug_content(settings, search_content,
-                                      search_results, message.content)
+                                      search_results, full_prompt)
 
         # Process user message and get AI response
         is_error = await get_response(
-            {
-                "message_history": message_history,
-                "keep_history": settings.get("keep_history", True)
-            },
-            message,
+            full_prompt,
             resp,
             {
                 "model": settings["generative_model"],
                 "max_tokens": settings["max_tokens"],
                 "temperature": settings["temperature"]
             },
-            cl.user_session.get("chat_profile"),
+            is_api=False,
             stream_response=settings.get("stream", True)
         )
+
+        if settings["keep_history"]:
+            full_prompt.append(ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content=resp.content,
+            ))
+            cl.user_session.set('message_history', full_prompt)
 
         if not is_error:
             # Extend response with searched jira urls
@@ -409,15 +382,30 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
         response.content = "An error occurred while searching the vector database."
         return response
 
-    message = MockMessage(content=message_content + build_prompt(search_results), urls=[])
-
+    is_error_prompt, full_prompt = await build_prompt(
+        search_results,
+        message_content,
+        profile_name,
+        HistorySettings(
+            keep_history=False,
+            message_history=[],
+        ),
+    )
     # Process user message and get AI response
     is_error = await get_response(
-        {"keep_history": False}, message, response, generative_model_settings,
-        profile_name, is_api=True, stream_response=False
+        full_prompt,
+        response,
+        generative_model_settings,
+        is_api=True,
+        stream_response=False
     )
+
     if not is_error:
         append_searched_urls(search_results, response, enable_rerank, urls_as_list=True)
+
+    if is_error_prompt:
+        response.content = ("Warning! The content from the vector database "
+                            "has been truncated.\n" + response.content)
 
     return response
 
