@@ -387,7 +387,7 @@ async def handle_user_message_api( # pylint: disable=too-many-arguments
         message_content,
         profile_name,
         HistorySettings(
-            keep_history=cl.user_session.get,
+            keep_history=False,
             message_history=[],
         ),
     )
