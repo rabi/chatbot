@@ -88,7 +88,7 @@ class Config:
                 'deepseek-ai/DeepSeek-R1-Distill-Llama-8B'),
             generative_model_max_context=int(os.environ.get(
                 "GENERATIVE_MODEL_MAX_CONTEXT",
-                20000,
+                32000,
             )),
             embeddings_model=os.environ.get(
                 "EMBEDDINGS_LLM_MODEL_NAME", 'BAAI/bge-m3'),
