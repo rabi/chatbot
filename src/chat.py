@@ -217,7 +217,8 @@ async def print_debug_content(
     debug_content += f"\n#### Full user message:\n```\n{str(message_content)}\n```"
 
     cl.logger.debug(debug_content)
-    await cl.Message(content=debug_content, author="debug").send()
+    async with cl.Step(name="debug") as debug_step:
+        debug_step.output = debug_content
 
 
 def _build_search_content_from_history(message_history: ThreadMessages) -> str:
@@ -228,16 +229,6 @@ def _build_search_content_from_history(message_history: ThreadMessages) -> str:
             if message['role'] == 'user':
                 previous_message_content += f"\n{message['content']}"
     return previous_message_content
-
-
-def _filter_debug_messages(message_history: ThreadMessages) -> ThreadMessages:
-    """Remove all debug messages from history."""
-    if message_history:
-        message_history = [
-            message for message in message_history
-            if message.get("name", "system") != "debug"]
-
-    return message_history
 
 
 async def handle_user_message( # pylint: disable=too-many-locals,too-many-statements
@@ -254,7 +245,6 @@ async def handle_user_message( # pylint: disable=too-many-locals,too-many-statem
     resp = cl.Message(content="")
 
     message_history = cl.user_session.get('message_history')
-    message_history = _filter_debug_messages(message_history)
 
     try:
         if message.elements and message.elements[0].path:
