@@ -17,4 +17,4 @@ RUN chmod +x api-entrypoint.sh
 USER chatuser
 EXPOSE 8001
 
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["api-entrypoint.sh"]
