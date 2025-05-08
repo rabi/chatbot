@@ -22,9 +22,13 @@ async def discover_embeddings_model_names() -> List[str]:
     models = await emb_llm.models.list()
     return extract_model_ids(models)
 
+async def get_default_embeddings_model_name() -> str:
+    """Get name of the default embeddings model."""
+    models = await discover_embeddings_model_names()
+    return models[0]
 
 async def generate_embedding(
-    text: str, model_name: str = config.embeddings_model
+    text: str, model_name: str
 ) -> None | List[float]:
     """Generate embeddings for the given text using the specified model."""
     try:
@@ -51,7 +55,7 @@ async def generate_embedding(
 
 async def get_num_tokens(
     prompt: str,
-    model: str = config.embeddings_model,
+    model: str,
     llm_url: str = config.embeddings_llm_api_url,
     api_key: str = config.embeddings_llm_api_key,
 ) -> int:

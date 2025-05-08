@@ -1,6 +1,7 @@
 """Handler for chat messages and responses."""
 from dataclasses import dataclass
 import chainlit as cl
+from chainlit.context import ChainlitContextException
 import httpx
 from openai.types.chat import ChatCompletionAssistantMessageParam
 
@@ -8,7 +9,10 @@ import constants
 from prompt import build_prompt
 from vectordb import vector_store
 from generation import get_response
-from embeddings import get_num_tokens, generate_embedding, get_rerank_score
+from embeddings import (
+    get_num_tokens, generate_embedding,
+    get_rerank_score, get_default_embeddings_model_name
+)
 from settings import ModelSettings, HistorySettings, ThreadMessages
 from config import config
 from constants import (
@@ -129,7 +133,8 @@ async def check_message_length(message_content: str) -> tuple[bool, str]:
         - str: Error message if the length check fails, empty string otherwise
     """
     try:
-        num_required_tokens = await get_num_tokens(message_content)
+        num_required_tokens = await get_num_tokens(message_content,
+                                                   await get_embeddings_model_name())
     except httpx.HTTPStatusError as e:
         cl.logger.error(e)
         return False, "We've encountered an issue. Please try again later ..."
@@ -189,7 +194,8 @@ async def print_debug_content(
     )
 
     # Display the number of tokens in the search content
-    num_t = await get_num_tokens(search_content)
+    num_t = await get_num_tokens(search_content,
+                                 await get_embeddings_model_name())
     debug_content += f"**Number of tokens in search content:** {num_t}\n\n"
 
     # Display vector DB debug information if debug mode is enabled
@@ -286,7 +292,7 @@ async def handle_user_message(
         try:
             search_results = await perform_multi_collection_search(
                 search_content,
-                get_embeddings_model_name(),
+                await get_embeddings_model_name(),
                 get_similarity_threshold(),
                 collections,
                 settings,
@@ -427,14 +433,13 @@ def get_similarity_threshold() -> float:
     # If threshold is above 1, cap it at 1
     return min(threshold, 1.0)
 
-
-def get_embeddings_model_name() -> str:
+async def get_embeddings_model_name() -> str:
     """Get name of the embeddings model."""
-
-    settings = cl.user_session.get("settings")
-
-    return settings.get("embeddings_model", config.embeddings_model)
-
+    try:
+        settings = cl.user_session.get("settings")
+        return settings.get("embeddings_model")
+    except ChainlitContextException:
+        return await get_default_embeddings_model_name()
 
 def check_collections(collections_to_check: list[str]) -> str:
     """
