@@ -217,7 +217,8 @@ async def print_debug_content(
     debug_content += f"\n#### Full user message:\n```\n{str(message_content)}\n```"
 
     cl.logger.debug(debug_content)
-    await cl.Message(content=debug_content, author="debug").send()
+    async with cl.Step(name="debug") as debug_step:
+        debug_step.output = debug_content
 
 
 def _build_search_content_from_history(message_history: ThreadMessages) -> str:
@@ -230,17 +231,7 @@ def _build_search_content_from_history(message_history: ThreadMessages) -> str:
     return previous_message_content
 
 
-def _filter_debug_messages(message_history: ThreadMessages) -> ThreadMessages:
-    """Remove all debug messages from history."""
-    if message_history:
-        message_history = [
-            message for message in message_history
-            if message.get("name", "system") != "debug"]
-
-    return message_history
-
-
-async def handle_user_message(
+async def handle_user_message( # pylint: disable=too-many-locals,too-many-statements
     message: cl.Message,
     debug_mode=False):
     """
@@ -254,7 +245,6 @@ async def handle_user_message(
     resp = cl.Message(content="")
 
     message_history = cl.user_session.get('message_history')
-    message_history = _filter_debug_messages(message_history)
 
     try:
         if message.elements and message.elements[0].path:
@@ -288,49 +278,58 @@ async def handle_user_message(
         return
 
     if message.content:
-        # Search all collections with the same embedding (embedding now generated inside)
-        try:
-            search_results = await perform_multi_collection_search(
-                search_content,
-                await get_embeddings_model_name(),
-                get_similarity_threshold(),
-                collections,
-                settings,
-            )
-        except httpx.HTTPStatusError as e:
-            cl.logger.error(e)
-            resp.content = "An error occurred while searching the vector database."
-            await resp.send()
-            return
+        async with cl.Step(name="searching") as search_step:
+            search_step.output = "Searching for relevant information in our knowledge base..."
+            # Search all collections with the same embedding (embedding now generated inside)
+            try:
+                search_results = await perform_multi_collection_search(
+                    search_content,
+                    await get_embeddings_model_name(),
+                    get_similarity_threshold(),
+                    collections,
+                    settings,
+                )
+            except httpx.HTTPStatusError as e:
+                cl.logger.error(e)
+                resp.content = "An error occurred while searching the vector database."
+                await resp.send()
+                return
+        await search_step.remove()
 
-        is_error_prompt, full_prompt = await build_prompt(
-            search_results,
-            message.content,
-            cl.user_session.get("chat_profile"),
-            HistorySettings(
-                keep_history=settings["keep_history"],
-                message_history=message_history,
-            ),
-        )
-        if is_error_prompt:
-            await cl.Message(content=constants.WARNING_MESSAGE_TRUNCATED_TEXT).send()
+        async with cl.Step(name="building a prompt") as prompt_step:
+            prompt_step.output = "Generating a full prompt on the system prompt, " \
+                                 "user message, and search results..."
+            is_error_prompt, full_prompt = await build_prompt(
+                search_results,
+                message.content,
+                cl.user_session.get("chat_profile"),
+                HistorySettings(
+                    keep_history=settings["keep_history"],
+                    message_history=message_history,
+                ),
+            )
+            if is_error_prompt:
+                await cl.Message(content=constants.WARNING_MESSAGE_TRUNCATED_TEXT).send()
+        await prompt_step.remove()
 
         if debug_mode:
             await print_debug_content(settings, search_content,
                                       search_results, full_prompt)
 
-        # Process user message and get AI response
-        is_error = await get_response(
-            full_prompt,
-            resp,
-            {
-                "model": settings["generative_model"],
-                "max_tokens": settings["max_tokens"],
-                "temperature": settings["temperature"]
-            },
-            is_api=False,
-            stream_response=settings.get("stream", True)
-        )
+        async with cl.Step(name="thinking and generating a response") as resp_step:
+            # Process user message and get AI response
+            is_error = await get_response(
+                full_prompt,
+                resp,
+                {
+                    "model": settings["generative_model"],
+                    "max_tokens": settings["max_tokens"],
+                    "temperature": settings["temperature"]
+                },
+                is_api=False,
+                stream_response=settings.get("stream", True),
+                step=resp_step,
+            )
 
         if settings["keep_history"]:
             full_prompt.append(ChatCompletionAssistantMessageParam(
