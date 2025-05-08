@@ -480,12 +480,14 @@ def get_collections_per_profile(
         return [
             config.vectordb_collection_name_documentation,
             config.vectordb_collection_name_errata,
+            config.vectordb_collection_name_solutions,
         ]
     if profile_name == RCA_FULL_PROFILE:
         return [
             config.vectordb_collection_name_jira,
             config.vectordb_collection_name_documentation,
             config.vectordb_collection_name_errata,
+            config.vectordb_collection_name_solutions,
         ]
 
     return [
