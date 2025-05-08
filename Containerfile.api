@@ -10,10 +10,11 @@ WORKDIR /app
 RUN chown -R chatuser:chatgroup /app
 
 COPY src/ .
-COPY pdm.lock pyproject.toml Makefile .
+COPY pdm.lock pyproject.toml Makefile api-entrypoint.sh .
 RUN make install-pdm install-global
+RUN chmod +x api-entrypoint.sh
 
 USER chatuser
 EXPOSE 8001
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8001"]
+ENTRYPOINT ["entrypoint.sh"]
